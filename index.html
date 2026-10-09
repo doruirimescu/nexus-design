@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nexus Design System</title>
+  <meta name="description" content="Component gallery for the Investing Nexus dark-blue style.">
+  <!-- Relative links, so this gallery previews local edits when opened from disk. -->
+  <link rel="stylesheet" href="nexus.css">
+  <link rel="icon" href="favicon.svg">
+  <style>
+    .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+    .swatch { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+    .swatch div { height: 54px; }
+    .swatch p { margin: 0; padding: 8px 10px; font-size: 12.5px; }
+    .swatch code { font-family: var(--mono); color: var(--muted); font-size: 11.5px; display: block; }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="index.html"><span class="brand-mark">N</span>Nexus Design</a>
+      <nav class="nav">
+        <a href="index.html" class="active">Gallery</a>
+        <a href="https://github.com/doruirimescu/nexus-design/blob/main/DESIGN.md">Guide</a>
+        <a href="template.html">Template</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="eyebrow">Design system</div>
+    <h1>Nexus <span class="gradient-text">components</span></h1>
+    <p class="lead">Everything a page needs is in one stylesheet. Link it, and changes made here reach <mark>every page</mark> within minutes. This gallery shows <span class="hl-accent">all components</span> as they currently look.</p>
+
+    <h2 class="section">Usage</h2>
+    <div class="panel"><code class="sym">&lt;link rel="stylesheet" href="https://doruirimescu.github.io/nexus-design/nexus.css"&gt;</code></div>
+
+    <h2 class="section">Colour tokens</h2>
+    <div class="swatches" id="swatches"></div>
+
+    <h2 class="section">Typography &amp; highlights</h2>
+    <div class="panel">
+      <div class="eyebrow">Eyebrow label</div>
+      <h1 style="margin-top:4px">Heading with <span class="gradient-text">gradient</span></h1>
+      <p class="lead">Lead paragraph with a <mark>gold highlight</mark> for the key fact and an <span class="hl-accent">accent highlight</span> for supporting numbers. <a href="#">Links</a> use the accent colour.</p>
+      <p class="muted small">Muted small text for notes.</p>
+    </div>
+
+    <h2 class="section">Cards</h2>
+    <div class="card-grid">
+      <a class="card" href="#"><em class="tag">8 Oct 2026</em><strong>Link card with tag</strong><span>Lifts and glows on hover.</span></a>
+      <a class="card" href="#"><strong>Link card</strong><span>Short description of the destination.</span></a>
+      <div class="card"><strong>Static card</strong><span>Same look, no hover state.</span></div>
+    </div>
+
+    <h2 class="section">KPI tiles, verdicts &amp; badges</h2>
+    <div class="kpis" style="margin-top:0">
+      <div class="panel kpi"><div class="label">Stocks valued</div><div class="value">97</div><div class="sub"><span class="verdict under">27 under</span> &nbsp; <span class="verdict over">70 over</span></div></div>
+      <div class="panel kpi"><div class="label">Equal-weight</div><div class="value">14.5%</div><div class="sub"><span class="verdict over">Overvalued</span> · average gap</div></div>
+      <div class="panel kpi"><div class="label">Median</div><div class="value">3.2%</div><div class="sub"><span class="verdict under">Undervalued</span> · middle</div></div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <span class="badge live">Latest snapshot</span>
+      <span class="badge past">Historical — latest is Thu, 8 Oct 2026</span>
+    </div>
+
+    <h2 class="section">Controls</h2>
+    <div class="row">
+      <button class="btn">Secondary</button>
+      <button class="btn primary">Primary</button>
+      <button class="btn" disabled>Disabled</button>
+      <input class="input" type="search" placeholder="Search ticker or company…">
+      <select class="input"><option>All verdicts</option></select>
+      <div class="date-bar"><label>Date</label><button class="btn">‹</button><select><option>Thu, 8 Oct 2026 · latest</option></select><button class="btn" disabled>›</button><button class="btn primary">Latest</button></div>
+    </div>
+
+    <h2 class="section">Table</h2>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Symbol</th><th>Company</th><th class="num">Valuation</th><th class="num">Price</th><th class="num">Solvency</th></tr></thead>
+        <tbody>
+          <tr><td class="sym">INTU</td><td class="company">Intuit Inc</td><td class="num"><span class="verdict under">Undervalued 65%</span></td><td class="num">412.30</td><td class="num">76</td></tr>
+          <tr><td class="sym">MSFT</td><td class="company"><mark>Micro</mark>soft Corp</td><td class="num"><span class="verdict over">Overvalued 22%</span></td><td class="num">403.84</td><td class="num">81</td></tr>
+          <tr><td class="sym">TSLA</td><td class="company">Tesla Inc</td><td class="num"><span class="verdict over">Overvalued 82%</span></td><td class="num">251.10</td><td class="num">86</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 class="section">Bar list</h2>
+    <div class="panel">
+      <div class="dist-row"><div class="dist-label">Strongly undervalued</div><div class="dist-track"><div class="dist-bar" style="width:45%;background:var(--under)"></div></div><div class="dist-count">12</div></div>
+      <div class="dist-row"><div class="dist-label">Slightly overvalued</div><div class="dist-track"><div class="dist-bar" style="width:50%;background:var(--over);opacity:.6"></div></div><div class="dist-count">13</div></div>
+      <div class="dist-row"><div class="dist-label">Strongly overvalued</div><div class="dist-track"><div class="dist-bar" style="width:100%;background:var(--over)"></div></div><div class="dist-count">30</div></div>
+    </div>
+
+    <h2 class="section">Chart</h2>
+    <div class="panel chart-panel">
+      <div class="chart-head"><h3>Valuation gap</h3>
+        <div class="legend"><span><i style="background:var(--under)"></i>Undervalued</span><span><i style="background:var(--over)"></i>Overvalued</span></div></div>
+      <div id="chart" class="chart" style="height:340px"></div>
+    </div>
+
+    <h2 class="section">Notice</h2>
+    <div class="notice" style="margin-top:0">Could not load the snapshot for 2026-10-08.</div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">Nexus design system · <a href="https://github.com/doruirimescu/nexus-design">GitHub</a></div>
+  </footer>
+
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+  <script src="nexus.js"></script>
+  <script>
+    const tokens = ["--bg", "--surface", "--surface-2", "--surface-3", "--border", "--border-strong", "--text", "--muted", "--faint",
+      "--accent", "--accent-strong", "--hl-text", "--under", "--under-ink", "--over", "--over-ink"];
+    const css = getComputedStyle(document.documentElement);
+    document.getElementById("swatches").innerHTML = tokens
+      .map((t) => `<div class="swatch"><div style="background:var(${t})"></div><p>${t}<code>${css.getPropertyValue(t).trim()}</code></p></div>`)
+      .join("");
+
+    const syms = ["INTU", "ADBE", "PDD", "BKNG", "CMCSA", "AAPL", "MSFT", "NVDA", "AMD", "PLTR", "ARM", "TSLA"];
+    const vals = [65, 58, 56, 54, 12, -34, -22, -21, -54, -73, -85, -82];
+    if (window.Plotly) {
+      Plotly.newPlot("chart", [{
+        type: "bar", x: syms, y: vals,
+        marker: { color: vals.map((v) => (v >= 0 ? Nexus.colors.positive : Nexus.colors.negative)), cornerradius: 3 },
+        hovertemplate: "%{x}: %{y}%<extra></extra>",
+      }], Nexus.plotlyLayout({ yaxis: { ticksuffix: "%" }, bargap: 0.25 }), Nexus.plotlyConfig);
+    }
+  </script>
+</body>
+</html>

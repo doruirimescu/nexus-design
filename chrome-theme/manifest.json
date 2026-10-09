@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Nexus Dark Blue",
+  "version": "1.0",
+  "description": "Deep navy theme with blue and teal accents.",
+  "theme": {
+    "images": {
+      "theme_ntp_background": "images/ntp_background.png"
+    },
+    "colors": {
+      "frame": [10, 22, 40],
+      "frame_inactive": [13, 26, 48],
+      "frame_incognito": [6, 12, 24],
+      "frame_incognito_inactive": [9, 16, 30],
+      "background_tab": [15, 27, 51],
+      "background_tab_inactive": [15, 27, 51],
+      "toolbar": [20, 36, 74],
+      "tab_text": [230, 237, 247],
+      "tab_background_text": [159, 176, 207],
+      "tab_background_text_inactive": [107, 128, 168],
+      "bookmark_text": [214, 225, 243],
+      "toolbar_button_icon": [156, 193, 255],
+      "toolbar_text": [230, 237, 247],
+      "omnibox_background": [12, 24, 48],
+      "omnibox_text": [230, 237, 247],
+      "button_background": [31, 52, 96],
+      "ntp_background": [8, 18, 34],
+      "ntp_text": [230, 237, 247],
+      "ntp_link": [79, 140, 255],
+      "ntp_header": [79, 140, 255]
+    },
+    "tints": {
+      "buttons": [0.6, 0.6, 0.85]
+    },
+    "properties": {
+      "ntp_background_alignment": "center",
+      "ntp_background_repeat": "no-repeat"
+    }
+  }
+}
