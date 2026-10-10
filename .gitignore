@@ -1,1 +1,5 @@
 chrome-theme/Cached Theme.pak
+
+# Local agent tooling
+.serena/
+.claude/
