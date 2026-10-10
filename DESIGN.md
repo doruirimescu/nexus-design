@@ -39,13 +39,14 @@ markup.
 
 ## Themes
 
-| Id | Name | Scheme | Character |
-|---|---|---|---|
-| `midnight` | Midnight | dark | Deep navy, blue accent. The default and the original look. |
-| `graphite` | Graphite | dark | Neutral charcoal, periwinkle accent. |
-| `contrast` | High contrast | dark | Black and white, brighter marks. |
-| `daylight` | Daylight | light | Cool white surfaces, slate text. |
-| `paper` | Paper | light | Warm cream, ink-blue accent. |
+| Id | Name | Scheme | Character | Type (display / body / mono) |
+|---|---|---|---|---|
+| `midnight` | Midnight | dark | Deep navy, blue accent. The default and the original look. | Inter / Inter / JetBrains Mono |
+| `graphite` | Graphite | dark | Neutral charcoal, periwinkle accent. | IBM Plex Sans / IBM Plex Sans / IBM Plex Mono |
+| `contrast` | High contrast | dark | Black and white, brighter marks. | Atkinson Hyperlegible Next / same / Atkinson Hyperlegible Mono |
+| `daylight` | Daylight | light | Cool white surfaces, slate text. | Manrope / Manrope / JetBrains Mono |
+| `paper` | Paper | light | Warm cream, ink-blue accent. | Newsreader / Source Sans 3 / IBM Plex Mono |
+| `terminal` | Terminal | dark | Green-phosphor CRT, reimagined: green UI; cyan (under), amber (over) and magenta (second series) for data; faint scanlines, glow on display type only. | VT323 / JetBrains Mono / JetBrains Mono |
 
 Viewers can also pick **Match system**, which follows the device's light/dark
 setting (Daylight or Midnight).
@@ -76,7 +77,11 @@ How it works:
 ### Adding a theme
 
 1. Copy `themes/midnight.css` to `themes/<id>.css`, change the selector to
-   `[data-theme="<id>"]` (no `:root`) and set every token, including `color-scheme`.
+   `[data-theme="<id>"]` (no `:root`) and set every token, including `color-scheme`,
+   the fonts and `--radius`. Add any new font family to the Google Fonts `@import`
+   at the top of `nexus.css`. A theme may add a few scoped rules after its tokens
+   (Terminal adds scanlines and a display-type glow); keep them decorative and never
+   reduce text contrast.
 2. Add `@import url("themes/<id>.css");` to the top of `nexus.css`.
 3. Add `{ id, name, scheme, description }` to `THEMES` in `nexus.js`.
 4. Check contrast: `--text` ≥ 7:1, and `--muted`, `--accent`, the `-ink`
@@ -109,7 +114,8 @@ Every theme defines all of these. Values below are Midnight's.
 | `--div-mid` | `#24375f` | midpoint of a diverging scale (`--over` → `--div-mid` → `--under`) |
 | `--topbar-bg`, `--row-hover`, `--shadow`, `--shadow-hover` | | chrome and elevation |
 | `--gradient-text`, `--brand-gradient` | | `.gradient-text`, `.brand-mark` |
-| `--radius`, `--font`, `--mono` | `12px`, Inter, JetBrains Mono | shared by all themes |
+| `--font` / `--font-display` / `--mono` | Inter / Inter / JetBrains Mono | body, headlines + KPI numbers, tickers and code (per theme) |
+| `--radius` | `12px` | cards, panels, tables (per theme) |
 
 ## Page skeleton
 

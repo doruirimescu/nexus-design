@@ -1,0 +1,79 @@
+/* Terminal — a modern retrofuturist take on a green-phosphor CRT.
+ * Green text on a near-black, green-cast screen. Charts and verdicts use other
+ * phosphor colours so they stay distinct from the green UI: cyan for undervalued,
+ * amber for overvalued, magenta for a second series. Faint scanlines and a soft
+ * glow on display type only; body text stays crisp. */
+[data-theme="terminal"] {
+  --font: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: "VT323", "JetBrains Mono", ui-monospace, monospace;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius: 3px;
+  color-scheme: dark;
+  --bg: #030806;
+  --bg-glow: #0c2a17;
+  --bg-glow-2: #071a0e;
+  --surface: #06110a;
+  --surface-2: #0a1a10;
+  --surface-3: #10261a;
+  --border: #1b3a26;
+  --border-strong: #2d5c3d;
+  --text: #c6f6d0;
+  --muted: #8ad49e;
+  --faint: #66ad7d;
+  --accent: #4dff88;
+  --accent-strong: #2bd46a;
+  --accent-soft: rgba(77, 255, 136, 0.13);
+  --accent-ink: #b5ffcb;
+  --on-accent: #021006;
+  --hl-bg: rgba(255, 176, 0, 0.2);
+  --hl-soft: rgba(255, 176, 0, 0.08);
+  --hl-line: rgba(255, 176, 0, 0.45);
+  --hl-text: #ffcf5c;
+  --under: #38c6ff;
+  --under-ink: #95e1ff;
+  --under-soft: rgba(56, 198, 255, 0.13);
+  --under-line: rgba(56, 198, 255, 0.45);
+  --over: #ff9a2e;
+  --over-ink: #ffc078;
+  --over-soft: rgba(255, 154, 46, 0.12);
+  --over-line: rgba(255, 154, 46, 0.45);
+  --neutral: #6f9a7e;
+  --series-2: #ff5fd2;
+  --series-2-ink: #ff9be6;
+  --series-2-soft: rgba(255, 95, 210, 0.16);
+  --zero-line: #3a7a50;
+  --seq-low: #0b1d12;
+  --seq-mid: #22a85c;
+  --seq-high: #d8ffe4;
+  --div-mid: #13301e;
+  --topbar-bg: rgba(3, 8, 6, 0.86);
+  --row-hover: rgba(77, 255, 136, 0.06);
+  --shadow: 0 0 0 1px rgba(77, 255, 136, 0.04), 0 0 26px -10px rgba(77, 255, 136, 0.22);
+  --shadow-hover: 0 0 0 1px var(--accent), 0 0 30px -6px rgba(77, 255, 136, 0.42);
+  --gradient-text: linear-gradient(90deg, #c6f6d0 0%, #4dff88 60%, #38c6ff 100%);
+  --brand-gradient: linear-gradient(135deg, #2bd46a 0%, #38c6ff 100%);
+}
+
+/* CRT treatment: scanlines and a vignette over the whole screen (never intercepts
+ * input), and a phosphor glow on display type. Body text gets no glow. */
+html[data-theme="terminal"] body::after {
+  content: ""; position: fixed; inset: 0; z-index: 80; pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, 0.45) 100%);
+}
+[data-theme="terminal"] h1,
+[data-theme="terminal"] .kpi .value,
+[data-theme="terminal"] .brand {
+  text-shadow: 0 0 10px rgba(77, 255, 136, 0.45), 0 0 2px rgba(77, 255, 136, 0.6);
+}
+/* VT323 is a pixel face with a small x-height: set it larger than the sans themes. */
+[data-theme="terminal"] h1 { font-size: clamp(38px, 5.4vw, 56px); letter-spacing: 0.01em; line-height: 1.02; }
+[data-theme="terminal"] .kpi .value { font-size: 40px; letter-spacing: 0.02em; line-height: 1.05; }
+/* Monospace runs wide: a notch smaller keeps buttons and pickers on one line. */
+html[data-theme="terminal"] body { font-size: 14px; }
+[data-theme="terminal"] .btn, [data-theme="terminal"] .date-bar select, [data-theme="terminal"] .input { font-size: 13px; }
+[data-theme="terminal"] ::selection { background: var(--accent); color: var(--on-accent); }
+@media (prefers-contrast: more) {
+  html[data-theme="terminal"] body::after { display: none; }
+}

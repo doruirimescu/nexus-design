@@ -40,6 +40,7 @@
     { id: "contrast", name: "High contrast", scheme: "dark", description: "Black and white with brighter marks." },
     { id: "daylight", name: "Daylight", scheme: "light", description: "Cool white surfaces and slate text." },
     { id: "paper", name: "Paper", scheme: "light", description: "Warm cream, like a printed report." },
+    { id: "terminal", name: "Terminal", scheme: "dark", description: "Green phosphor CRT, reimagined. Amber and aqua for the data." },
   ];
   const AUTO = { id: "auto", name: "Match system", description: "Midnight or Daylight, following your device." };
   const DEFAULT = "midnight";
@@ -136,9 +137,10 @@
     for (const [k, v] of Object.entries(extra || {})) out[k] = isObj(v) && isObj(base[k]) ? merge(base[k], v) : v;
     return out;
   }
-  const FONT = "Inter, system-ui, sans-serif";
+  // Chart text follows the theme's body font.
+  const font = () => token("--font") || "Inter, system-ui, sans-serif";
   function plotlyLayout(extra) {
-    const c = colors();
+    const c = colors(), FONT = font();
     return merge(
       {
         paper_bgcolor: "rgba(0,0,0,0)",
@@ -149,6 +151,7 @@
         xaxis: { gridcolor: c.border, linecolor: c.border, zerolinecolor: c.zeroLine },
         yaxis: { gridcolor: c.border, linecolor: c.border, zerolinecolor: c.zeroLine, zerolinewidth: 1.5 },
         legend: { font: { color: c.muted } },
+        modebar: { bgcolor: "rgba(0,0,0,0)", color: c.faint, activecolor: c.accent },
       },
       extra
     );
@@ -196,7 +199,8 @@
     document.querySelectorAll(".js-plotly-plot").forEach((gd) => {
       if (!gd.data || !gd.layout) return;
       try {
-        window.Plotly.react(gd, gd.data.map((t) => walk(t, false)), walk(gd.layout, false), gd._context || plotlyConfig);
+        const layout = merge(walk(gd.layout, false), { font: { family: font() }, hoverlabel: { font: { family: font() } } });
+        window.Plotly.react(gd, gd.data.map((t) => walk(t, false)), layout, gd._context || plotlyConfig);
       } catch (e) { /* a chart that can't be re-coloured keeps its old colours */ }
     });
   }

@@ -1,5 +1,9 @@
 /* Daylight — cool white surfaces, slate text, the same blue accent. */
 [data-theme="daylight"] {
+  --font: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font);
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius: 14px;
   color-scheme: light;
   --bg: #f3f6fb;
   --bg-glow: #dbe6fa;
