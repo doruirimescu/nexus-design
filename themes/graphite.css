@@ -1,0 +1,47 @@
+/* Graphite — neutral charcoal greys with a soft periwinkle accent. */
+[data-theme="graphite"] {
+  color-scheme: dark;
+  --bg: #111315;
+  --bg-glow: #1f242b;
+  --bg-glow-2: #181c21;
+  --surface: #16191d;
+  --surface-2: #1c2025;
+  --surface-3: #252a31;
+  --border: #2b3139;
+  --border-strong: #3c444f;
+  --text: #e8eaed;
+  --muted: #a9b1bc;
+  --faint: #7f8894;
+  --accent: #7aa2ff;
+  --accent-strong: #3a66cc;
+  --accent-soft: rgba(122, 162, 255, 0.14);
+  --accent-ink: #c9d8ff;
+  --on-accent: #ffffff;
+  --hl-bg: rgba(250, 204, 21, 0.16);
+  --hl-soft: rgba(250, 204, 21, 0.07);
+  --hl-line: rgba(250, 204, 21, 0.3);
+  --hl-text: #fde68a;
+  --under: #14a088;
+  --under-ink: #5fd4bd;
+  --under-soft: rgba(20, 160, 136, 0.14);
+  --under-line: rgba(20, 160, 136, 0.35);
+  --over: #dd6a2c;
+  --over-ink: #f4a06f;
+  --over-soft: rgba(221, 106, 44, 0.12);
+  --over-line: rgba(221, 106, 44, 0.4);
+  --neutral: #7d8692;
+  --series-2: #c98500;
+  --series-2-ink: #f0c060;
+  --series-2-soft: rgba(201, 133, 0, 0.24);
+  --zero-line: #4c5664;
+  --seq-low: #1d2126;
+  --seq-mid: #4f7ee8;
+  --seq-high: #d6e2ff;
+  --div-mid: #2e3540;
+  --topbar-bg: rgba(17, 19, 21, 0.8);
+  --row-hover: rgba(122, 162, 255, 0.06);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+  --shadow-hover: 0 0 0 1px var(--accent-soft), 0 16px 34px -14px rgba(79, 126, 232, 0.4);
+  --gradient-text: linear-gradient(90deg, #ffffff 0%, #c9d8ff 55%, #5fd4bd 100%);
+  --brand-gradient: linear-gradient(135deg, #7aa2ff 0%, #14a088 100%);
+}

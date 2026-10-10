@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Nexus Design System</title>
-  <meta name="description" content="Component gallery for the Investing Nexus dark-blue style.">
+  <meta name="description" content="Component gallery and themes for the Investing Nexus design system.">
   <!-- Relative links, so this gallery previews local edits when opened from disk. -->
   <link rel="stylesheet" href="nexus.css">
+  <script src="nexus.js"></script>
   <link rel="icon" href="favicon.svg">
   <style>
     .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
@@ -15,6 +16,16 @@
     .swatch p { margin: 0; padding: 8px 10px; font-size: 12.5px; }
     .swatch code { font-family: var(--mono); color: var(--muted); font-size: 11.5px; display: block; }
     .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+    /* Each preview carries data-theme, so it renders with that theme's own tokens */
+    .theme-card {
+      cursor: pointer; text-align: left; font: inherit; padding: 14px; border-radius: var(--radius);
+      background: var(--bg); color: var(--text); border: 1px solid var(--border-strong);
+    }
+    .theme-card:hover { border-color: var(--accent); }
+    .theme-card.current { box-shadow: 0 0 0 2px var(--accent); }
+    .theme-card .panel { padding: 10px 12px; margin-top: 10px; }
+    .theme-card strong { display: block; }
   </style>
 </head>
 <body>
@@ -32,12 +43,17 @@
   <main class="container">
     <div class="eyebrow">Design system</div>
     <h1>Nexus <span class="gradient-text">components</span></h1>
-    <p class="lead">Everything a page needs is in one stylesheet. Link it, and changes made here reach <mark>every page</mark> within minutes. This gallery shows <span class="hl-accent">all components</span> as they currently look.</p>
+    <p class="lead">One stylesheet and one script give a page every component and <mark>every theme</mark>. Changes pushed here reach all pages that link them. Switch themes with the <span class="hl-accent">Theme</span> tab at the bottom right, or pick one below.</p>
 
     <h2 class="section">Usage</h2>
-    <div class="panel"><code class="sym">&lt;link rel="stylesheet" href="https://doruirimescu.github.io/nexus-design/nexus.css"&gt;</code></div>
+    <pre class="code-block"><span class="c">&lt;!-- in &lt;head&gt;, in this order --&gt;</span>
+&lt;link rel="stylesheet" href="https://doruirimescu.github.io/nexus-design/nexus.css"&gt;
+&lt;script src="https://doruirimescu.github.io/nexus-design/nexus.js"&gt;&lt;/script&gt;</pre>
 
-    <h2 class="section">Colour tokens</h2>
+    <h2 class="section">Themes</h2>
+    <div class="theme-grid" id="themes"></div>
+
+    <h2 class="section">Colour tokens · current theme</h2>
     <div class="swatches" id="swatches"></div>
 
     <h2 class="section">Typography &amp; highlights</h2>
@@ -45,7 +61,7 @@
       <div class="eyebrow">Eyebrow label</div>
       <h1 style="margin-top:4px">Heading with <span class="gradient-text">gradient</span></h1>
       <p class="lead">Lead paragraph with a <mark>gold highlight</mark> for the key fact and an <span class="hl-accent">accent highlight</span> for supporting numbers. <a href="#">Links</a> use the accent colour.</p>
-      <p class="muted small">Muted small text for notes.</p>
+      <p class="muted small">Muted small text for notes. <code>inline code</code> <span class="kbd">Esc</span></p>
     </div>
 
     <h2 class="section">Cards</h2>
@@ -59,21 +75,34 @@
     <div class="kpis" style="margin-top:0">
       <div class="panel kpi"><div class="label">Stocks valued</div><div class="value">97</div><div class="sub"><span class="verdict under">27 under</span> &nbsp; <span class="verdict over">70 over</span></div></div>
       <div class="panel kpi"><div class="label">Equal-weight</div><div class="value">14.5%</div><div class="sub"><span class="verdict over">Overvalued</span> · average gap</div></div>
-      <div class="panel kpi"><div class="label">Median</div><div class="value">3.2%</div><div class="sub"><span class="verdict under">Undervalued</span> · middle</div></div>
+      <div class="panel kpi"><div class="label">Principal paid</div><div class="value">62%</div><div class="progress"><div style="width:62%;background:var(--under)"></div></div><div class="sub">of the loan</div></div>
     </div>
     <div class="row" style="margin-top:16px">
       <span class="badge live">Latest snapshot</span>
       <span class="badge past">Historical — latest is Thu, 8 Oct 2026</span>
+      <span class="pos">+12.4%</span> <span class="neg">−3.1%</span> <span class="dim">n/a</span>
+      <span class="chips"><span class="chip">NVDA</span><span class="chip">AMD</span></span>
     </div>
 
     <h2 class="section">Controls</h2>
     <div class="row">
       <button class="btn">Secondary</button>
       <button class="btn primary">Primary</button>
+      <button class="btn on">Toggled on</button>
+      <button class="btn sm">Small</button>
       <button class="btn" disabled>Disabled</button>
       <input class="input" type="search" placeholder="Search ticker or company…">
       <select class="input"><option>All verdicts</option></select>
       <div class="date-bar"><label>Date</label><button class="btn">‹</button><select><option>Thu, 8 Oct 2026 · latest</option></select><button class="btn" disabled>›</button><button class="btn primary">Latest</button></div>
+    </div>
+
+    <h2 class="section">Form</h2>
+    <div class="panel">
+      <div class="form-grid">
+        <label class="field">Ticker <span class="hint">Any US listing</span><input class="input" value="AAPL"></label>
+        <label class="field">Years <span class="hint">1 to 30</span><input class="input" type="number" value="10"></label>
+        <div class="form-actions"><button class="btn primary lg">Calculate</button><span class="muted small">Runs on the backend.</span></div>
+      </div>
     </div>
 
     <h2 class="section">Table</h2>
@@ -98,12 +127,17 @@
     <h2 class="section">Chart</h2>
     <div class="panel chart-panel">
       <div class="chart-head"><h3>Valuation gap</h3>
-        <div class="legend"><span><i style="background:var(--under)"></i>Undervalued</span><span><i style="background:var(--over)"></i>Overvalued</span></div></div>
-      <div id="chart" class="chart" style="height:340px"></div>
+        <div class="legend"><span><i class="sw-under"></i>Undervalued</span><span><i class="sw-over"></i>Overvalued</span><span><i class="ln sw-accent"></i>Average</span></div></div>
+      <div id="chart" class="chart h-md"></div>
     </div>
 
-    <h2 class="section">Notice</h2>
-    <div class="notice" style="margin-top:0">Could not load the snapshot for 2026-10-08.</div>
+    <h2 class="section">Text blocks</h2>
+    <div class="prose">
+      <p>Explanatory text in <code>.prose</code> is muted, with <strong>strong words</strong> in the text colour.</p>
+      <div class="formula">IV = EPS × (8.5 + 2g) × 4.4 / Y</div>
+      <div class="callout"><strong>Note.</strong> A callout draws attention to a caveat.</div>
+    </div>
+    <div class="notice">Could not load the snapshot for 2026-10-08.</div>
   </main>
 
   <footer class="footer">
@@ -111,23 +145,42 @@
   </footer>
 
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
-  <script src="nexus.js"></script>
   <script>
     const tokens = ["--bg", "--surface", "--surface-2", "--surface-3", "--border", "--border-strong", "--text", "--muted", "--faint",
-      "--accent", "--accent-strong", "--hl-text", "--under", "--under-ink", "--over", "--over-ink"];
-    const css = getComputedStyle(document.documentElement);
-    document.getElementById("swatches").innerHTML = tokens
-      .map((t) => `<div class="swatch"><div style="background:var(${t})"></div><p>${t}<code>${css.getPropertyValue(t).trim()}</code></p></div>`)
-      .join("");
+      "--accent", "--accent-strong", "--accent-ink", "--hl-text", "--under", "--under-ink", "--over", "--over-ink",
+      "--neutral", "--series-2", "--series-2-ink", "--seq-low", "--seq-mid", "--seq-high"];
+    function drawSwatches() {
+      document.getElementById("swatches").innerHTML = tokens
+        .map((t) => `<div class="swatch"><div style="background:var(${t})"></div><p>${t}<code>${Nexus.token(t)}</code></p></div>`)
+        .join("");
+    }
+    function drawThemes() {
+      document.getElementById("themes").innerHTML = Nexus.themes.map((t) => `
+        <button type="button" class="theme-card${t.id === Nexus.theme ? " current" : ""}" data-theme="${t.id}" data-pick="${t.id}">
+          <strong>${t.name}</strong><span class="small muted">${t.description}</span>
+          <div class="panel"><span class="verdict under">Under</span> &nbsp;<span class="verdict over">Over</span> &nbsp;<mark>key</mark></div>
+        </button>`).join("");
+    }
+    document.getElementById("themes").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-pick]");
+      if (b) Nexus.setTheme(b.dataset.pick);
+    });
+    drawSwatches();
+    drawThemes();
+    Nexus.onThemeChange(() => { drawSwatches(); drawThemes(); });
 
     const syms = ["INTU", "ADBE", "PDD", "BKNG", "CMCSA", "AAPL", "MSFT", "NVDA", "AMD", "PLTR", "ARM", "TSLA"];
     const vals = [65, 58, 56, 54, 12, -34, -22, -21, -54, -73, -85, -82];
     if (window.Plotly) {
+      const C = Nexus.colors;
       Plotly.newPlot("chart", [{
         type: "bar", x: syms, y: vals,
-        marker: { color: vals.map((v) => (v >= 0 ? Nexus.colors.positive : Nexus.colors.negative)), cornerradius: 3 },
+        marker: { color: vals.map((v) => (v >= 0 ? C.positive : C.negative)), cornerradius: 3 },
         hovertemplate: "%{x}: %{y}%<extra></extra>",
-      }], Nexus.plotlyLayout({ yaxis: { ticksuffix: "%" }, bargap: 0.25 }), Nexus.plotlyConfig);
+      }], Nexus.plotlyLayout({
+        yaxis: { ticksuffix: "%" }, bargap: 0.25, showlegend: false,
+        shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: -5.6, y1: -5.6, line: { color: C.accent, dash: "dash", width: 1.5 } }],
+      }), Nexus.plotlyConfig);
     }
   </script>
 </body>

@@ -1,0 +1,47 @@
+/* Paper — warm cream surfaces and ink-blue accent, like a printed report. */
+[data-theme="paper"] {
+  color-scheme: light;
+  --bg: #f4eee2;
+  --bg-glow: #e9dcc2;
+  --bg-glow-2: #efe5d1;
+  --surface: #fffbf3;
+  --surface-2: #faf4e8;
+  --surface-3: #eee4d0;
+  --border: #e2d6bf;
+  --border-strong: #ccbc9e;
+  --text: #2a2116;
+  --muted: #5c5040;
+  --faint: #6f6250;
+  --accent: #3d55a8;
+  --accent-strong: #2f4590;
+  --accent-soft: rgba(61, 85, 168, 0.12);
+  --accent-ink: #273a7a;
+  --on-accent: #ffffff;
+  --hl-bg: rgba(234, 179, 8, 0.32);
+  --hl-soft: rgba(234, 179, 8, 0.12);
+  --hl-line: rgba(180, 120, 0, 0.45);
+  --hl-text: #6b3e00;
+  --under: #0f8a74;
+  --under-ink: #0b6b5a;
+  --under-soft: rgba(15, 138, 116, 0.11);
+  --under-line: rgba(15, 138, 116, 0.4);
+  --over: #c2581a;
+  --over-ink: #933c0b;
+  --over-soft: rgba(194, 88, 26, 0.11);
+  --over-line: rgba(194, 88, 26, 0.42);
+  --neutral: #8a7c66;
+  --series-2: #a86a00;
+  --series-2-ink: #754a00;
+  --series-2-soft: rgba(168, 106, 0, 0.16);
+  --zero-line: #b3a385;
+  --seq-low: #ede3cf;
+  --seq-mid: #6a7fc4;
+  --seq-high: #1f2f6b;
+  --div-mid: #e7dcc6;
+  --topbar-bg: rgba(255, 251, 243, 0.85);
+  --row-hover: rgba(61, 85, 168, 0.05);
+  --shadow: 0 1px 2px rgba(42, 33, 22, 0.05), 0 8px 24px -14px rgba(42, 33, 22, 0.22);
+  --shadow-hover: 0 0 0 1px var(--accent-soft), 0 14px 30px -14px rgba(61, 85, 168, 0.35);
+  --gradient-text: linear-gradient(90deg, #2a2116 0%, #3d55a8 60%, #0f8a74 100%);
+  --brand-gradient: linear-gradient(135deg, #3d55a8 0%, #0f8a74 100%);
+}

@@ -1,0 +1,48 @@
+/* Midnight — the original Investing Nexus look: deep navy, blue accent. Default theme. */
+:root,
+[data-theme="midnight"] {
+  color-scheme: dark;
+  --bg: #0a1628;
+  --bg-glow: #12305f;
+  --bg-glow-2: #0f2550;
+  --surface: #0f1b33;
+  --surface-2: #14244a;
+  --surface-3: #1a2d5a;
+  --border: #1f3460;
+  --border-strong: #2b4680;
+  --text: #e6edf7;
+  --muted: #9fb0cf;
+  --faint: #6b80a8;
+  --accent: #4f8cff;
+  --accent-strong: #2f6fea;
+  --accent-soft: rgba(79, 140, 255, 0.14);
+  --accent-ink: #bcd4ff;
+  --on-accent: #ffffff;
+  --hl-bg: rgba(250, 204, 21, 0.16);
+  --hl-soft: rgba(250, 204, 21, 0.08);
+  --hl-line: rgba(250, 204, 21, 0.3);
+  --hl-text: #fde68a;
+  --under: #14a088;
+  --under-ink: #5fd4bd;
+  --under-soft: rgba(20, 160, 136, 0.14);
+  --under-line: rgba(20, 160, 136, 0.35);
+  --over: #dd6a2c;
+  --over-ink: #f4a06f;
+  --over-soft: rgba(221, 106, 44, 0.12);
+  --over-line: rgba(221, 106, 44, 0.4);
+  --neutral: #6c81a9;
+  --series-2: #c98500;
+  --series-2-ink: #f0c060;
+  --series-2-soft: rgba(201, 133, 0, 0.24);
+  --zero-line: #3a5594;
+  --seq-low: #15254b;
+  --seq-mid: #2a78d6;
+  --seq-high: #cde2fb;
+  --div-mid: #24375f;
+  --topbar-bg: rgba(10, 22, 40, 0.78);
+  --row-hover: rgba(79, 140, 255, 0.06);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+  --shadow-hover: 0 0 0 1px var(--accent-soft), 0 16px 34px -14px rgba(47, 111, 234, 0.45);
+  --gradient-text: linear-gradient(90deg, #ffffff 0%, #9cc1ff 55%, #5fd4bd 100%);
+  --brand-gradient: linear-gradient(135deg, #4f8cff 0%, #14a088 100%);
+}

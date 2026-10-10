@@ -1,0 +1,47 @@
+/* Contrast — black background, white text, brighter marks. For glare, small screens or low vision. */
+[data-theme="contrast"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --bg-glow: #0b1830;
+  --bg-glow-2: #000000;
+  --surface: #0a0a0a;
+  --surface-2: #141414;
+  --surface-3: #222222;
+  --border: #474747;
+  --border-strong: #7a7a7a;
+  --text: #ffffff;
+  --muted: #d6d6d6;
+  --faint: #ababab;
+  --accent: #6cb6ff;
+  --accent-strong: #4aa3ff;
+  --accent-soft: rgba(108, 182, 255, 0.2);
+  --accent-ink: #d2e9ff;
+  --on-accent: #000000;
+  --hl-bg: rgba(255, 224, 102, 0.24);
+  --hl-soft: rgba(255, 224, 102, 0.1);
+  --hl-line: rgba(255, 224, 102, 0.55);
+  --hl-text: #ffe066;
+  --under: #1fc8aa;
+  --under-ink: #6af0d8;
+  --under-soft: rgba(31, 200, 170, 0.2);
+  --under-line: rgba(31, 200, 170, 0.6);
+  --over: #ff8a3d;
+  --over-ink: #ffb784;
+  --over-soft: rgba(255, 138, 61, 0.18);
+  --over-line: rgba(255, 138, 61, 0.6);
+  --neutral: #a6a6a6;
+  --series-2: #e8a400;
+  --series-2-ink: #ffd166;
+  --series-2-soft: rgba(232, 164, 0, 0.28);
+  --zero-line: #9a9a9a;
+  --seq-low: #151515;
+  --seq-mid: #3d8fe0;
+  --seq-high: #e3f1ff;
+  --div-mid: #333333;
+  --topbar-bg: rgba(0, 0, 0, 0.88);
+  --row-hover: rgba(108, 182, 255, 0.1);
+  --shadow: none;
+  --shadow-hover: 0 0 0 2px var(--accent);
+  --gradient-text: linear-gradient(90deg, #ffffff 0%, #d2e9ff 60%, #6af0d8 100%);
+  --brand-gradient: linear-gradient(135deg, #6cb6ff 0%, #1fc8aa 100%);
+}
