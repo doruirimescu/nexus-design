@@ -85,7 +85,8 @@
     </div>
 
     <h2 class="section">Controls</h2>
-    <div class="row">
+    <p class="muted small">Scroll past this row: the dock at the bottom keeps the source switch one tap away.</p>
+    <div class="row" id="controls">
       <button class="btn">Secondary</button>
       <button class="btn primary">Primary</button>
       <button class="btn on">Toggled on</button>
@@ -93,6 +94,7 @@
       <button class="btn" disabled>Disabled</button>
       <input class="input" type="search" placeholder="Search ticker or company…">
       <select class="input"><option>All verdicts</option></select>
+      <div class="segmented date-bar" role="group" aria-label="Source"><button class="btn" aria-pressed="true">AlphaSpread</button><button class="btn" aria-pressed="false">Fair Value</button><button class="btn" aria-pressed="false">Combined</button></div>
       <div class="date-bar"><label>Date</label><button class="btn">‹</button><select><option>Thu, 8 Oct 2026 · latest</option></select><button class="btn" disabled>›</button><button class="btn primary">Latest</button></div>
     </div>
 
@@ -140,6 +142,8 @@
     <div class="notice">Could not load the snapshot for 2026-10-08.</div>
   </main>
 
+  <div class="dock" data-dock-for="#controls" role="group" aria-label="Source"><label>Source</label><button class="btn" aria-pressed="true">AlphaSpread</button><button class="btn" aria-pressed="false">Fair Value</button><button class="btn" aria-pressed="false">Combined</button></div>
+
   <footer class="footer">
     <div class="container">Nexus design system · <a href="https://github.com/doruirimescu/nexus-design">GitHub</a></div>
   </footer>
@@ -161,6 +165,11 @@
           <div class="panel"><span class="verdict under">Under</span> &nbsp;<span class="verdict over">Over</span> &nbsp;<mark>key</mark></div>
         </button>`).join("");
     }
+    // Demo: segmented controls and the dock behave as one radio group.
+    document.querySelectorAll(".segmented, .dock").forEach((g) => g.addEventListener("click", (e) => {
+      const b = e.target.closest(".btn"); if (!b) return;
+      document.querySelectorAll(".segmented .btn, .dock .btn").forEach((x) => x.setAttribute("aria-pressed", String(x.textContent === b.textContent)));
+    }));
     document.getElementById("themes").addEventListener("click", (e) => {
       const b = e.target.closest("[data-pick]");
       if (b) Nexus.setTheme(b.dataset.pick);

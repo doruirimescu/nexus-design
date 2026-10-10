@@ -62,6 +62,12 @@ How it works:
   choice still wins. Hide the panel with `<html data-nexus-panel="off">`.
 - Any element can carry `data-theme` to show a different theme inside it, which is how
   the panel and the gallery draw previews.
+- The theme button sits at the end of the page's `.topbar` (a floating tab on pages
+  without one).
+- The `.topbar` slides away while scrolling down and returns on any scroll up, so
+  phones get the full screen for content. Keep it fixed with
+  `<html data-nexus-topbar="static">`. On phones the nav is one swipeable row, scrolled
+  so the active link is in view.
 - On a switch, every Plotly chart is re-coloured automatically: each colour that
   matched a token of the old theme becomes the same token of the new theme.
   Colours a page derives some other way can be redrawn in
@@ -175,6 +181,18 @@ Separate sections with `<h2 class="section">Title</h2>`.
   <div class="dist-count">12</div></div>
 
 <!-- Text: .prose, .formula (block), .callout (gold note), .notice (error), .code-block, .kbd -->
+
+<!-- Segmented control: one pressed option (aria-pressed="true") -->
+<div class="segmented" role="group" aria-label="Source">
+  <button class="btn" aria-pressed="true">AlphaSpread</button><button class="btn" aria-pressed="false">Fair Value</button>
+</div>
+
+<!-- Dock: a floating copy of a page control. nexus.js shows it once the element named
+     in data-dock-for has scrolled up out of view (bottom centre, thumb-reachable on
+     phones). The page renders the same buttons in both and keeps them in sync. -->
+<div class="dock" data-dock-for="#source-switch" role="group" aria-label="Source">
+  <label>Source</label><button class="btn" aria-pressed="true">AlphaSpread</button>…
+</div>
 
 <!-- Two-column layout that stacks on mobile -->
 <div class="two-col">…</div>

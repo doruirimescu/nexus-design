@@ -9,6 +9,10 @@
  *
  * It adds a collapsible "Theme" panel to every page (opt out with
  * <html data-nexus-panel="off">). The viewer's choice is kept in localStorage.
+ * The panel's button sits at the end of the page's .topbar (a floating tab when there
+ * is none). The top bar slides away while scrolling down and returns on scroll up
+ * (keep it fixed with <html data-nexus-topbar="static">). Any .dock[data-dock-for]
+ * is shown once the element it names has scrolled up out of view.
  *
  * Exposes window.Nexus:
  *   Nexus.themes                  [{ id, name, scheme, description }]
@@ -256,12 +260,14 @@
 
   function buildPanel() {
     if (root.dataset.nexusPanel === "off" || panel) return;
+    // In the top bar when the page has one; otherwise a floating tab on the right edge.
+    const bar = document.querySelector(".topbar-inner");
     const tab = document.createElement("button");
     tab.type = "button";
-    tab.className = "nx-theme-tab";
+    tab.className = bar ? "nx-theme-btn" : "nx-theme-tab";
     tab.setAttribute("aria-controls", "nx-theme-panel");
     tab.setAttribute("aria-expanded", "false");
-    tab.innerHTML = `${ICON}<span class="nx-label">Theme</span>`;
+    tab.innerHTML = bar ? ICON : `${ICON}<span class="nx-label">Theme</span>`;
     tab.title = "Change theme";
     tab.setAttribute("aria-label", "Change theme");
 
@@ -292,13 +298,60 @@
     box.addEventListener("keydown", (e) => { if (e.key === "Escape") open(false); });
     box.addEventListener("change", (e) => { if (e.target.name === "nx-theme") setTheme(e.target.value); });
 
-    document.body.append(tab, backdrop, box);
+    if (bar) bar.appendChild(tab);
+    else document.body.append(tab);
+    document.body.append(backdrop, box);
     panel = { tab, box };
     syncPanel();
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", buildPanel);
-  else buildPanel();
+  // ---------- Top bar: hide on scroll down, show on scroll up ----------
+
+  function autoHideTopbar() {
+    const topbar = document.querySelector(".topbar");
+    if (!topbar || root.dataset.nexusTopbar === "static") return;
+    let lastY = window.scrollY, ticking = false;
+    const update = () => {
+      ticking = false;
+      const y = window.scrollY, dy = y - lastY;
+      const keep = y < topbar.offsetHeight || topbar.contains(document.activeElement) ||
+        (panel && panel.box.classList.contains("open"));
+      if (keep || dy < -6) topbar.classList.remove("nx-hidden");
+      else if (dy > 6) topbar.classList.add("nx-hidden");
+      if (Math.abs(dy) > 6 || keep) lastY = y;
+    };
+    window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+    topbar.addEventListener("focusin", () => topbar.classList.remove("nx-hidden"));
+  }
+
+  // On phones the nav is one swipeable row: start it with the current page in view.
+  function revealActiveNav() {
+    const nav = document.querySelector(".topbar .nav"), a = nav && nav.querySelector("a.active");
+    if (a && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = a.offsetLeft - (nav.clientWidth - a.offsetWidth) / 2;
+  }
+
+  // ---------- Docks: keep a page control one tap away ----------
+
+  function setupDocks() {
+    if (!("IntersectionObserver" in window)) return;
+    document.querySelectorAll(".dock[data-dock-for]").forEach((dock) => {
+      const target = document.querySelector(dock.dataset.dockFor);
+      if (!target) return;
+      // Visible only while the original control is above the viewport (scrolled past).
+      new IntersectionObserver(([e]) => {
+        dock.classList.toggle("visible", !e.isIntersecting && e.boundingClientRect.bottom < 0);
+      }).observe(target);
+    });
+  }
+
+  function init() {
+    buildPanel();
+    autoHideTopbar();
+    revealActiveNav();
+    setupDocks();
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
 
   window.Nexus = {
     themes: THEMES.map((t) => ({ ...t })),
