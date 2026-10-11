@@ -1,0 +1,53 @@
+/* Monokai Machine — Monokai Pro's cool blue-slate filter.
+ * Cyan accent, green (under) and coral-red (over) for polarity, lavender for a
+ * second series, bright yellow highlights. */
+[data-theme="monokai-machine"] {
+  --font: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font);
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius: 2px;
+  color-scheme: dark;
+  --bg: #1d2528;
+  --bg-glow: #33424a;
+  --bg-glow-2: #273136;
+  --surface: #273136;
+  --surface-2: #2f3b41;
+  --surface-3: #3a4449;
+  --border: #3f4b51;
+  --border-strong: #545f62;
+  --text: #f2fffc;
+  --muted: #b8c4c3;
+  --faint: #909c9d;
+  --accent: #7cd5f1;
+  --accent-strong: #5ec8e8;
+  --accent-soft: rgba(124, 213, 241, 0.13);
+  --accent-ink: #bdeaf8;
+  --on-accent: #1d2528;
+  --hl-bg: rgba(255, 237, 114, 0.15);
+  --hl-soft: rgba(255, 237, 114, 0.06);
+  --hl-line: rgba(255, 237, 114, 0.36);
+  --hl-text: #ffed72;
+  --under: #a2e57b;
+  --under-ink: #c6f0ad;
+  --under-soft: rgba(162, 229, 123, 0.12);
+  --under-line: rgba(162, 229, 123, 0.38);
+  --over: #ff6d7e;
+  --over-ink: #ffa9b3;
+  --over-soft: rgba(255, 109, 126, 0.13);
+  --over-line: rgba(255, 109, 126, 0.42);
+  --neutral: #7f8b8c;
+  --series-2: #baa0f8;
+  --series-2-ink: #d6c7fb;
+  --series-2-soft: rgba(186, 160, 248, 0.18);
+  --zero-line: #6b7678;
+  --seq-low: #2b363b;
+  --seq-mid: #3fa9cc;
+  --seq-high: #d8f4fc;
+  --div-mid: #34404a;
+  --topbar-bg: rgba(29, 37, 40, 0.86);
+  --row-hover: rgba(124, 213, 241, 0.05);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 30px -12px rgba(0, 0, 0, 0.7);
+  --shadow-hover: 0 0 0 1px var(--accent-soft), 0 16px 34px -14px rgba(124, 213, 241, 0.3);
+  --gradient-text: linear-gradient(90deg, #f2fffc 0%, #7cd5f1 55%, #a2e57b 100%);
+  --brand-gradient: linear-gradient(135deg, #7cd5f1 0%, #baa0f8 100%);
+}

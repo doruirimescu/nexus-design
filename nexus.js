@@ -51,6 +51,9 @@
     { id: "daylight", name: "Daylight", scheme: "light", description: "Cool white surfaces and slate text." },
     { id: "paper", name: "Paper", scheme: "light", description: "Warm cream, like a printed report." },
     { id: "terminal", name: "Terminal", scheme: "dark", description: "Green phosphor CRT, reimagined. Amber and aqua for the data." },
+    { id: "monokai-pro", name: "Monokai Pro", scheme: "dark", description: "Warm charcoal, yellow accent, the Monokai spectrum." },
+    { id: "monokai-classic", name: "Monokai Classic", scheme: "dark", description: "The original olive-black Monokai, hot-pink accent." },
+    { id: "monokai-machine", name: "Monokai Machine", scheme: "dark", description: "Cool blue-slate Monokai, cyan accent." },
   ];
   const AUTO = { id: "auto", name: "Match system", description: "Midnight or Daylight, following your device." };
   const DEFAULT = "midnight";
@@ -230,6 +233,25 @@
       grid: { x: "dot", y: "dot" }, axis: { line: "borderStrong", frame: true, ticks: "outside", tickFont: "mono" },
       hover: { bg: "bg", border: "accent" }, glow: true,
       area: { alpha: 0.1 }, band: { alpha: 0.07, edge: "dot", event: "dot", label: "mono" },
+    },
+    "monokai-pro": {
+      name: "Syntax", description: "Softly rounded bars, ringed markers, dashed horizontal grid, mono band labels.",
+      bar: { radius: 3 }, line: { scale: 1.2 }, marker: { ring: true },
+      grid: { x: false, y: "dash" }, axis: {},
+      area: { alpha: 0.22 }, band: { alpha: 0.07, event: "dash", label: "mono" },
+    },
+    "monokai-classic": {
+      name: "Gutter", description: "Square bars split by background lines, diamond markers, ruled baseline, mono ticks.",
+      bar: { radius: 0, outline: "bg" }, line: { scale: 1, min: 1.5 }, marker: { symbol: "diamond" },
+      grid: { x: false, y: "solid" }, axis: { xLine: "borderStrong", ticks: "outside", tickFont: "mono" },
+      area: { alpha: 0.3, edge: "bg" }, band: { alpha: 0.08, edge: "dash", event: "dash", label: "mono" },
+    },
+    "monokai-machine": {
+      name: "Instrument", description: "Near-square bars, open diamond markers, framed plot with a dotted vertical grid.",
+      bar: { radius: 1 }, line: { scale: 0.9, min: 1.5 }, marker: { symbol: "diamond", hollow: true },
+      grid: { x: "dot", y: "solid" }, axis: { line: "borderStrong", frame: true, ticks: "outside", tickFont: "mono" },
+      hover: { bg: "bg", border: "accent" },
+      area: { alpha: 0.18 }, band: { alpha: 0.06, edge: "dot", event: "dash", label: "mono" },
     },
   };
   const chartStyle = () => CHART_STYLES[applied] || CHART_STYLES[DEFAULT];

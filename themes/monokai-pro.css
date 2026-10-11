@@ -1,0 +1,53 @@
+/* Monokai Pro — the warm charcoal of the Monokai Pro editor theme.
+ * Yellow accent, green (under) and pink-red (over) for polarity, purple for a
+ * second series, orange highlights. The brand gradient is the Monokai Pro spectrum. */
+[data-theme="monokai-pro"] {
+  --font: "Fira Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font);
+  --mono: "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius: 8px;
+  color-scheme: dark;
+  --bg: #221f22;
+  --bg-glow: #3a363b;
+  --bg-glow-2: #2d2a2e;
+  --surface: #2d2a2e;
+  --surface-2: #363337;
+  --surface-3: #403e41;
+  --border: #474448;
+  --border-strong: #5b595c;
+  --text: #fcfcfa;
+  --muted: #c1c0c0;
+  --faint: #939293;
+  --accent: #ffd866;
+  --accent-strong: #f5cc55;
+  --accent-soft: rgba(255, 216, 102, 0.13);
+  --accent-ink: #ffe9a8;
+  --on-accent: #2d2a2e;
+  --hl-bg: rgba(252, 152, 103, 0.18);
+  --hl-soft: rgba(252, 152, 103, 0.07);
+  --hl-line: rgba(252, 152, 103, 0.4);
+  --hl-text: #ffc2a1;
+  --under: #a9dc76;
+  --under-ink: #c9eba6;
+  --under-soft: rgba(169, 220, 118, 0.13);
+  --under-line: rgba(169, 220, 118, 0.4);
+  --over: #ff6188;
+  --over-ink: #ff9bb3;
+  --over-soft: rgba(255, 97, 136, 0.13);
+  --over-line: rgba(255, 97, 136, 0.42);
+  --neutral: #858386;
+  --series-2: #ab9df2;
+  --series-2-ink: #cfc5fa;
+  --series-2-soft: rgba(171, 157, 242, 0.18);
+  --zero-line: #727072;
+  --seq-low: #332f34;
+  --seq-mid: #d9b648;
+  --seq-high: #fff3c4;
+  --div-mid: #3d393e;
+  --topbar-bg: rgba(34, 31, 34, 0.85);
+  --row-hover: rgba(255, 216, 102, 0.05);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 30px -12px rgba(0, 0, 0, 0.65);
+  --shadow-hover: 0 0 0 1px var(--accent-soft), 0 16px 34px -14px rgba(255, 216, 102, 0.28);
+  --gradient-text: linear-gradient(90deg, #fcfcfa 0%, #ffd866 55%, #fc9867 100%);
+  --brand-gradient: linear-gradient(135deg, #ff6188 0%, #fc9867 25%, #ffd866 50%, #a9dc76 70%, #78dce8 85%, #ab9df2 100%);
+}

@@ -1,7 +1,7 @@
 # nexus-design
 
 The shared design system of Investing Nexus: components, switchable themes
-(Midnight, Graphite, High contrast, Daylight, Paper, Terminal, or match the system), each with its own colours and type, a
+(Midnight, Graphite, High contrast, Daylight, Paper, Terminal, Monokai Pro, Monokai Classic, Monokai Machine, or match the system), each with its own colours and type, a
 theme panel and chart helpers. Pages link the hosted files, so a change pushed
 here restyles every page that uses them.
 

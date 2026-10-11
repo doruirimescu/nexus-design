@@ -47,6 +47,9 @@ markup.
 | `daylight` | Daylight | light | Cool white surfaces, slate text. | Manrope / Manrope / JetBrains Mono | Soft |
 | `paper` | Paper | light | Warm cream, ink-blue accent. | Newsreader / Source Sans 3 / IBM Plex Mono | Print |
 | `terminal` | Terminal | dark | Green-phosphor CRT, reimagined: green UI; cyan (under), amber (over) and magenta (second series) for data; faint scanlines, glow on display type only. | VT323 / JetBrains Mono / JetBrains Mono | Phosphor |
+| `monokai-pro` | Monokai Pro | dark | Warm charcoal of the Monokai Pro editor theme: yellow accent, green (under), pink-red (over), purple second series, orange highlights; spectrum brand gradient. | Fira Sans / Fira Sans / Fira Code | Syntax |
+| `monokai-classic` | Monokai Classic | dark | The original olive-black Monokai: hot-pink accent, green (under), orange (over), purple second series, string-yellow highlights. | Source Sans 3 / Source Sans 3 / Source Code Pro | Gutter |
+| `monokai-machine` | Monokai Machine | dark | Monokai Pro's blue-slate filter: cyan accent, green (under), coral-red (over), lavender second series, yellow highlights. | Space Grotesk / Space Grotesk / JetBrains Mono | Instrument |
 
 Viewers can also pick **Match system**, which follows the device's light/dark
 setting (Daylight or Midnight).
@@ -299,6 +302,9 @@ and restyles drawn charts on a theme switch, so pages need no code for it.
 | Soft | Daylight | rounded 6px | ×1.25 weight, hollow markers | 26% fill | 7% bands, dotted events | light horizontal grid, no axis lines |
 | Print | Paper | square, thin ink outline | ×0.85 weight, open markers | hatched (`/` fill pattern) | ruled band edges, serif labels | horizontal grid, `--text` baseline, outside ticks, serif axis titles |
 | Phosphor | Terminal | wireframe (outline over a 22% fill) | glowing traces, square markers | faint 10% fill under a glowing edge | dotted band edges, mono labels | dotted graticule on both axes, framed plot, mono tick labels |
+| Syntax | Monokai Pro | rounded 3px | ×1.2 weight, markers ringed in `--surface` | 22% fill | 7% bands, dashed events, mono labels | dashed horizontal grid, no axis lines |
+| Gutter | Monokai Classic | square, 1.5px `--bg` outline | ×1 weight (min 1.5px), diamond markers | 30–50% fill, stacked layers split by `--bg` lines | 8% bands with dashed edges, mono labels | horizontal grid, `--border-strong` baseline, outside ticks, mono tick labels |
+| Instrument | Monokai Machine | 1px corners | ×0.9 weight (min 1.5px), open diamond markers | 18% fill | faint bands with dotted edges, dashed events, mono labels | solid horizontal and dotted vertical grid, framed plot, mono tick labels |
 
 - Explicit page settings win where they are a choice rather than a look: `showgrid`,
   `dash`, `marker.symbol`, an existing bar `marker.line`. Corner radius and line
