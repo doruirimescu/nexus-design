@@ -359,6 +359,76 @@ code { font-family: var(--mono); font-size: 0.9em; color: var(--accent-ink); }
   border: 1px solid var(--over-line); background: var(--over-soft); color: var(--over-ink);
 }
 
+/* ---------- Table of contents (long reads) ----------
+ * <nav class="toc"><h4>Contents</h4><ol><li><a href="#ch1">Title</a></li>…</ol></nav> */
+.toc { padding: 16px 20px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); }
+.toc h4 { margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.toc ol { margin: 0; padding: 0; list-style: none; counter-reset: toc; columns: 2 260px; column-gap: 28px; }
+.toc li { counter-increment: toc; break-inside: avoid; padding: 4px 0; font-size: 14px; }
+.toc li::before { content: counter(toc, decimal-leading-zero); font-family: var(--mono); font-size: 12px; color: var(--faint); margin-right: 10px; }
+.toc a { color: var(--text); text-decoration: none; }
+.toc a:hover { color: var(--accent); }
+
+/* ---------- T-accounts: balance sheets for money mechanics ----------
+ * <div class="t-grid">
+ *   <div class="t-account"><div class="t-title">Federal Reserve</div>
+ *     <div class="t-side"><h4>Assets</h4><div class="t-row up"><span>Treasuries</span><b>400</b></div></div>
+ *     <div class="t-side"><h4>Liabilities</h4>…</div>
+ *     <div class="t-total"><span>Total</span><b>400</b></div><div class="t-total">…</div>
+ *   </div>
+ * </div>
+ * .up / .down tint a row that just changed (teal / orange); .zero dims an empty line.
+ * A <small> inside <b> shows the change, e.g. <b>400 <small>+100</small></b>. */
+.t-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; }
+.t-account {
+  display: grid; grid-template-columns: 1fr 1fr; border-radius: var(--radius);
+  background: var(--surface); border: 1px solid var(--border); overflow: hidden;
+}
+.t-title { grid-column: 1 / -1; padding: 10px 14px; font-weight: 700; font-size: 14px; border-bottom: 2px solid var(--border-strong); }
+.t-title small { display: block; font-weight: 400; font-size: 12px; color: var(--faint); }
+.t-side { padding: 6px 0; min-width: 0; }
+.t-side + .t-side, .t-total + .t-total { border-left: 2px solid var(--border-strong); }
+.t-side h4 { margin: 2px 12px 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.t-row, .t-total { display: flex; justify-content: space-between; gap: 8px; padding: 5px 12px; font-size: 13px; color: var(--muted); }
+.t-row span { min-width: 0; overflow-wrap: anywhere; }
+.t-row b, .t-total b { font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.t-row b small, .t-total b small { font-size: 11px; font-weight: 600; margin-left: 4px; }
+.t-row.zero { color: var(--faint); }
+.t-row.zero b { color: var(--faint); font-weight: 400; }
+.t-row.up { background: var(--under-soft); animation: t-flash 0.9s ease; }
+.t-row.up b small { color: var(--under-ink); }
+.t-row.down { background: var(--over-soft); animation: t-flash 0.9s ease; }
+.t-row.down b small { color: var(--over-ink); }
+.t-total { border-top: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-weight: 600; }
+@keyframes t-flash { from { box-shadow: inset 3px 0 0 var(--accent); } to { box-shadow: inset 3px 0 0 transparent; } }
+
+/* ---------- Timeline: a dated list of events; items can be selectable buttons ----------
+ * <ol class="timeline"><li><button class="timeline-item" aria-pressed="false">
+ *   <time>15 Mar 2020</time><strong>Title</strong><span>What happened.</span></button></li></ol> */
+.timeline { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--border-strong); display: grid; gap: 6px; }
+.timeline-item {
+  position: relative; display: block; width: 100%; text-align: left; font: inherit; color: var(--muted);
+  padding: 9px 12px; border-radius: 10px; border: 1px solid transparent; background: none;
+}
+button.timeline-item { cursor: pointer; }
+.timeline-item::before {
+  content: ""; position: absolute; left: -21px; top: 14px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--surface); border: 2px solid var(--border-strong);
+}
+.timeline-item time { display: block; font-family: var(--mono); font-size: 12px; color: var(--faint); }
+.timeline-item strong { display: block; color: var(--text); font-size: 14px; margin: 1px 0 2px; }
+.timeline-item span { display: block; font-size: 13px; line-height: 1.5; }
+@media (hover: hover) { button.timeline-item:hover { background: var(--surface-2); border-color: var(--border); } }
+.timeline-item[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.timeline-item[aria-pressed="true"]::before { background: var(--accent); border-color: var(--accent); }
+.timeline-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Range slider with a label and live value ----------
+ * <label class="range-field">Reserves <output>3.0T</output><input type="range" …></label> */
+.range-field { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 12px; font-size: 13px; color: var(--muted); }
+.range-field output { font-family: var(--mono); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.range-field input[type="range"] { grid-column: 1 / -1; width: 100%; margin: 4px 0; accent-color: var(--accent); }
+
 /* ---------- Helpers ---------- */
 .muted { color: var(--muted); }
 .faint { color: var(--faint); }
@@ -484,4 +554,5 @@ code { font-family: var(--mono); font-size: 0.9em; color: var(--accent-ink); }
 }
 @media (prefers-reduced-motion: reduce) {
   .nx-theme-panel, .nx-theme-backdrop, .card, .nx-theme-tab .nx-label, .topbar, .dock { transition: none; }
+  .t-row.up, .t-row.down { animation: none; }
 }

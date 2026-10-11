@@ -203,6 +203,26 @@ Separate sections with `<h2 class="section">Title</h2>`.
 
 <!-- Two-column layout that stacks on mobile -->
 <div class="two-col">…</div>
+
+<!-- Table of contents for long reads (numbered, two columns on wide screens) -->
+<nav class="toc"><h4>Contents</h4><ol><li><a href="#ch1">What is a dollar?</a></li>…</ol></nav>
+
+<!-- T-accounts: balance sheets for money mechanics. .up / .down tint a row that just
+     changed (teal / orange, with the change in <small>); .zero dims an empty line. -->
+<div class="t-grid">
+  <div class="t-account"><div class="t-title">Federal Reserve<small>the central bank</small></div>
+    <div class="t-side"><h4>Assets</h4><div class="t-row up"><span>Treasury bonds</span><b>400 <small>+100</small></b></div></div>
+    <div class="t-side"><h4>Liabilities</h4><div class="t-row up"><span>Bank reserves</span><b>250 <small>+100</small></b></div></div>
+    <div class="t-total"><span>Total</span><b>400</b></div><div class="t-total"><span>Total</span><b>400</b></div>
+  </div>
+</div>
+
+<!-- Timeline: dated events; buttons with aria-pressed make it a picker (e.g. for a chart) -->
+<ol class="timeline"><li><button class="timeline-item" aria-pressed="true">
+  <time>15 Mar 2020</time><strong>Zero rates and $700B QE</strong><span>What happened.</span></button></li></ol>
+
+<!-- Range slider with a label and a live value -->
+<label class="range-field">Reserves <output>$3.00T</output><input type="range" min="0.6" max="4.6" step="0.05"></label>
 ```
 
 Helpers: `.muted`, `.faint`, `.small`, `.scroll-y`, `.gradient-text`, `.hl-accent`, `<mark>`.
@@ -236,7 +256,34 @@ Use Plotly with `nexus.js`, so charts follow the theme:
 - Don't hand-style marks or axes for the look (bar corners, line weight, marker
   shape, gridlines); the chart style does that per theme (below).
 - Every chart has a hover tooltip, and a legend when it has two or more series.
-- For a categorical series beyond the polarity pair, use `accent`, then `series2`.
+- For a categorical series beyond the polarity pair, use `accent`, then `series2`, then `neutral`
+  (and `faint` for an "other" remainder layer).
+
+### Areas, range bands, eras and events
+
+```js
+// Stacked area: give each layer an opaque colour; the theme picks the fill treatment.
+{ type: "scatter", mode: "lines", stackgroup: "one", x, y, line: { color: C.accent, width: 1 }, fillcolor: C.accent }
+// Single area under a line
+{ type: "scatter", x, y, fill: "tozeroy", line: { color: C.accent } }
+// Range band (e.g. a target range): an invisible lower edge, then fill: "tonexty" with a
+// translucent fillcolor. A translucent fill is the page's choice and is kept as set.
+{ x, y: lower, line: { width: 0, color: C.neutral }, hoverinfo: "skip" },
+{ x, y: upper, fill: "tonexty", fillcolor: Nexus.rgba(C.neutral, 0.22), line: { width: 0, color: C.neutral } }
+
+// Shaded eras (programmes, regimes, recessions) and dated event lines
+const b = Nexus.bands([{ x0: "2008-11-25", x1: "2010-03-31", label: "QE1", tone: "accent" }, …]);
+const e = Nexus.events([{ x: "2019-09-17", label: "SOFR 5.25%", tone: "negative" }]);
+Plotly.newPlot(id, data, Nexus.plotlyLayout({ shapes: [...b.shapes, ...e.shapes], annotations: [...b.annotations, ...e.annotations] }));
+```
+
+- `tone` is a `Nexus.colors` key: `accent` (default), `series2`, `neutral`, `positive`, `negative`.
+  Labels use the matching ink colour. `labelY` (0–1) staggers crowded labels; `label: ""` hides one
+  (do that on phones when bands are narrow).
+- Bands sit below the data; event lines above. Their opacity, outline and dash come from the theme.
+- A line `width: 0` stays invisible in every chart style.
+- Redraw interactive charts with `Plotly.react` (not `relayout`), so a theme switch restyles the
+  current state.
 
 ### Chart styles
 
@@ -244,14 +291,14 @@ Each theme also has a chart style: how marks and axes are drawn. Colours still c
 from the page. `nexus.js` applies it to every `Plotly.newPlot` / `Plotly.react` call,
 and restyles drawn charts on a theme switch, so pages need no code for it.
 
-| Style | Theme | Bars | Lines and markers | Grid and axes |
-|---|---|---|---|---|
-| Glass | Midnight | rounded 4px | ×1.1 weight, markers ringed in `--surface` | dotted horizontal grid, no axis lines |
-| Blueprint | Graphite | square | ×0.8 weight, square markers | hairline grid on both axes, framed plot, outside ticks, mono tick labels |
-| Bold | High contrast | 2px corners, 1.5px `--bg` outline | ×1.5 weight (min 2.5px), dash pattern per line series, larger ringed markers | strong horizontal grid, `--text` axis lines, 13px type |
-| Soft | Daylight | rounded 6px | ×1.25 weight, hollow markers | light horizontal grid, no axis lines |
-| Print | Paper | square, thin ink outline | ×0.85 weight, open markers | horizontal grid, `--text` baseline, outside ticks, serif axis titles |
-| Phosphor | Terminal | wireframe (outline over a 22% fill) | glowing traces, square markers | dotted graticule on both axes, framed plot, mono tick labels |
+| Style | Theme | Bars | Lines and markers | Areas | Bands and events | Grid and axes |
+|---|---|---|---|---|---|---|
+| Glass | Midnight | rounded 4px | ×1.1 weight, markers ringed in `--surface` | 32% fill | soft 8% bands, dotted event lines | dotted horizontal grid, no axis lines |
+| Blueprint | Graphite | square | ×0.8 weight, square markers | 16% fill | faint bands with dashed edges, mono labels | hairline grid on both axes, framed plot, outside ticks, mono tick labels |
+| Bold | High contrast | 2px corners, 1.5px `--bg` outline | ×1.5 weight (min 2.5px), dash pattern per line series, larger ringed markers | 62–82% fill, stacked layers split by `--bg` lines, no dashes | 13% bands with solid edges, dashed events | strong horizontal grid, `--text` axis lines, 13px type |
+| Soft | Daylight | rounded 6px | ×1.25 weight, hollow markers | 26% fill | 7% bands, dotted events | light horizontal grid, no axis lines |
+| Print | Paper | square, thin ink outline | ×0.85 weight, open markers | hatched (`/` fill pattern) | ruled band edges, serif labels | horizontal grid, `--text` baseline, outside ticks, serif axis titles |
+| Phosphor | Terminal | wireframe (outline over a 22% fill) | glowing traces, square markers | faint 10% fill under a glowing edge | dotted band edges, mono labels | dotted graticule on both axes, framed plot, mono tick labels |
 
 - Explicit page settings win where they are a choice rather than a look: `showgrid`,
   `dash`, `marker.symbol`, an existing bar `marker.line`. Corner radius and line

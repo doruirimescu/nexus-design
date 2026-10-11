@@ -147,6 +147,51 @@
       </div>
     </div>
 
+    <h2 class="section">Areas, eras and events</h2>
+    <p class="muted small">Stacked areas, range bands, shaded eras (<code>Nexus.bands</code>) and event lines (<code>Nexus.events</code>). Switch themes: each chart style fills areas and draws bands its own way (hatched in Print, glowing in Phosphor, split layers in Bold).</p>
+    <div class="panel chart-panel">
+      <div class="chart-head"><h3>Balance sheet by layer</h3>
+        <div class="legend"><span><i class="sw-accent"></i>Treasuries</span><span><i class="sw-series-2"></i>MBS</span><span><i class="sw-neutral"></i>Lending</span><span><i class="ln" style="background:var(--text)"></i>Total</span></div></div>
+      <div id="chart-area" class="chart h-lg"></div>
+    </div>
+    <div class="two-col">
+      <div class="panel chart-panel">
+        <div class="chart-head"><h3>Rate corridor</h3>
+          <div class="legend"><span><i class="band sw-neutral"></i>Target range</span><span><i class="ln sw-accent"></i>Market rate</span></div></div>
+        <div id="chart-corridor" class="chart h-md"></div>
+      </div>
+      <div class="panel chart-panel">
+        <div class="chart-head"><h3>Interactive curve</h3>
+          <div class="legend"><span><i class="ln sw-accent"></i>Rate</span><span><i class="ln sw-series-2"></i>Policy</span></div></div>
+        <div class="controls-demo" style="padding:6px 12px 0"><label class="range-field">Supply <output id="demo-out"></output><input type="range" id="demo-range" min="0.6" max="4.6" step="0.05" value="3"></label></div>
+        <div id="chart-curve" class="chart h-md"></div>
+      </div>
+    </div>
+
+    <h2 class="section">T-accounts</h2>
+    <div class="t-grid">
+      <div class="t-account"><div class="t-title">Federal Reserve<small>after buying $100 of bonds</small></div>
+        <div class="t-side"><h4>Assets</h4><div class="t-row up"><span>Treasury bonds</span><b>400 <small>+100</small></b></div><div class="t-row zero"><span>Repo loans</span><b>0</b></div></div>
+        <div class="t-side"><h4>Liabilities</h4><div class="t-row"><span>Currency</span><b>100</b></div><div class="t-row up"><span>Bank reserves</span><b>250 <small>+100</small></b></div><div class="t-row"><span>Treasury account</span><b>50</b></div></div>
+        <div class="t-total"><span>Total</span><b>400</b></div><div class="t-total"><span>Total</span><b>400</b></div>
+      </div>
+      <div class="t-account"><div class="t-title">Commercial bank<small>the seller</small></div>
+        <div class="t-side"><h4>Assets</h4><div class="t-row up"><span>Reserves</span><b>250 <small>+100</small></b></div><div class="t-row down"><span>Treasury bonds</span><b>100 <small>−100</small></b></div><div class="t-row"><span>Loans</span><b>500</b></div></div>
+        <div class="t-side"><h4>Liabilities</h4><div class="t-row"><span>Deposits</span><b>800</b></div><div class="t-row"><span>Equity</span><b>50</b></div></div>
+        <div class="t-total"><span>Total</span><b>850</b></div><div class="t-total"><span>Total</span><b>850</b></div>
+      </div>
+    </div>
+
+    <h2 class="section">Timeline &amp; contents</h2>
+    <div class="two-col">
+      <ol class="timeline" id="demo-timeline">
+        <li><button class="timeline-item" aria-pressed="false"><time>3 Mar 2020</time><strong>Emergency rate cut</strong><span>50 bp between meetings.</span></button></li>
+        <li><button class="timeline-item" aria-pressed="true"><time>15 Mar 2020</time><strong>Zero rates and $700B QE</strong><span>Selected item: aria-pressed="true".</span></button></li>
+        <li><div class="timeline-item"><time>23 Mar 2020</time><strong>Static item</strong><span>A plain div when the list is not a picker.</span></div></li>
+      </ol>
+      <nav class="toc" aria-label="Contents"><h4>Contents</h4><ol><li><a href="#">What is a dollar?</a></li><li><a href="#">How dollars are made</a></li><li><a href="#">The Fed's toolkit</a></li><li><a href="#">Repo and reverse repo</a></li><li><a href="#">QE versus QT</a></li></ol></nav>
+    </div>
+
     <h2 class="section">Text blocks</h2>
     <div class="prose">
       <p>Explanatory text in <code>.prose</code> is muted, with <strong>strong words</strong> in the text colour.</p>
@@ -224,7 +269,58 @@
         marker: { color: vals.map((v) => (v >= 0 ? C.positive : C.negative)), size: 9 },
         hovertemplate: "%{text}: score %{x}, gap %{y}%<extra></extra>",
       }], Nexus.plotlyLayout({ xaxis: { title: { text: "Fair Value score" } }, yaxis: { ticksuffix: "%", zeroline: true }, showlegend: false, margin: { t: 8 } }), Nexus.plotlyConfig);
+
+      // Stacked areas with shaded eras and an event line
+      const yrs = Array.from({ length: 19 }, (_, i) => 2008 + i);
+      const tsy = [0.5, 0.8, 1.0, 1.7, 1.7, 2.2, 2.5, 2.5, 2.5, 2.4, 2.2, 2.3, 4.7, 5.6, 5.6, 5.0, 4.3, 4.2, 4.5];
+      const mbs = [0, 0.9, 1.0, 0.85, 0.9, 1.5, 1.75, 1.75, 1.75, 1.75, 1.6, 1.4, 2.0, 2.6, 2.7, 2.4, 2.25, 2.05, 1.9];
+      const lend = [1.4, 0.3, 0.1, 0.05, 0.03, 0.02, 0.01, 0.01, 0.01, 0.01, 0.01, 0.2, 0.25, 0.1, 0.05, 0.35, 0.15, 0.01, 0.01];
+      const layer = (name, y, color) => ({ type: "scatter", mode: "lines", name, x: yrs, y, stackgroup: "one", line: { color, width: 1 }, fillcolor: color,
+        hovertemplate: `${name}: $%{y:.2f}T<extra></extra>` });
+      const eras = Nexus.bands([
+        { x0: 2008.9, x1: 2010.2, label: "QE1" }, { x0: 2012.7, x1: 2014.8, label: "QE3" },
+        { x0: 2017.8, x1: 2019.6, label: "QT1", tone: "series2" }, { x0: 2020.2, x1: 2022.2, label: "QE4" },
+        { x0: 2022.4, x1: 2025.9, label: "QT2", tone: "series2" },
+      ]);
+      const ev = Nexus.events([{ x: 2019.7, label: "Repo spike", tone: "negative", labelY: 0.86 }]);
+      Plotly.newPlot("chart-area", [layer("Treasuries", tsy, C.accent), layer("MBS", mbs, C.series2), layer("Lending", lend, C.neutral),
+        { type: "scatter", mode: "lines", name: "Total", x: yrs, y: yrs.map((_, i) => +(tsy[i] + mbs[i] + lend[i]).toFixed(2)), line: { color: C.text, width: 1.5, dash: "dot" },
+          hovertemplate: "Total: $%{y:.2f}T<extra></extra>" }],
+        Nexus.plotlyLayout({ showlegend: false, hovermode: "x unified", margin: { t: 8 }, yaxis: { tickprefix: "$", ticksuffix: "T" },
+          shapes: [...eras.shapes, ...ev.shapes], annotations: [...eras.annotations, ...ev.annotations] }), Nexus.plotlyConfig);
+
+      // Range band (invisible lower edge + tonexty) with a step line
+      const t = Array.from({ length: 40 }, (_, i) => i);
+      const lo = t.map((i) => (i < 8 ? 0 : i < 30 ? Math.min(5.25, (i - 8) * 0.5) : 5.25 - (i - 30) * 0.25));
+      Plotly.newPlot("chart-corridor", [
+        { type: "scatter", mode: "lines", x: t, y: lo, line: { width: 0, color: C.neutral, shape: "hv" }, hoverinfo: "skip" },
+        { type: "scatter", mode: "lines", x: t, y: lo.map((v) => v + 0.25), fill: "tonexty", fillcolor: Nexus.rgba(C.neutral, 0.22),
+          line: { width: 0, color: C.neutral, shape: "hv" }, hovertemplate: "Top: %{y:.2f}%<extra></extra>" },
+        { type: "scatter", mode: "lines", x: t, y: lo.map((v, i) => +(v + 0.08 + 0.03 * Math.sin(i)).toFixed(2)), line: { color: C.accent, width: 2 },
+          hovertemplate: "Rate: %{y:.2f}%<extra></extra>" },
+      ], Nexus.plotlyLayout({ showlegend: false, hovermode: "x unified", margin: { t: 8 }, yaxis: { ticksuffix: "%" } }), Nexus.plotlyConfig);
+
+      // Interactive curve: redraw with Plotly.react so a theme switch restyles the current state
+      function drawCurve() {
+        const c = Nexus.colors, R = +document.getElementById("demo-range").value;
+        const f = (x) => 0.15 - 0.07 + 0.12 * Math.exp(-(x - 2) / 0.35);
+        const xs = Array.from({ length: 201 }, (_, i) => 0.6 + i * 0.02);
+        document.getElementById("demo-out").textContent = "$" + R.toFixed(2) + "T";
+        const b = Nexus.bands([{ x0: 0.6, x1: 1.55, label: "Scarce", tone: "neutral" }, { x0: 1.55, x1: 2.6, label: "Ample" }, { x0: 2.6, x1: 4.6, label: "Abundant", tone: "series2" }]);
+        Plotly.react("chart-curve", [
+          { type: "scatter", mode: "lines", x: [0.6, 4.6], y: [0.15, 0.15], line: { color: c.series2, width: 1.5, dash: "dash" }, hovertemplate: "Policy: %{y:.2f}%<extra></extra>" },
+          { type: "scatter", mode: "lines", x: xs, y: xs.map((x) => Math.min(f(x), 1.6)), line: { color: c.accent, width: 2.5 }, hovertemplate: "%{y:.2f}%<extra></extra>" },
+          { type: "scatter", mode: "markers", x: [R], y: [Math.min(f(R), 1.6)], marker: { color: c.accent, size: 13 }, hovertemplate: "%{y:.2f}%<extra></extra>" },
+        ], Nexus.plotlyLayout({ showlegend: false, margin: { t: 8 }, xaxis: { ticksuffix: "T", tickprefix: "$" }, yaxis: { ticksuffix: "%", range: [0, 1.7] },
+          shapes: b.shapes, annotations: b.annotations }), Nexus.plotlyConfig);
+      }
+      document.getElementById("demo-range").addEventListener("input", drawCurve);
+      drawCurve();
     }
+    document.getElementById("demo-timeline").addEventListener("click", (e) => {
+      const b = e.target.closest("button.timeline-item"); if (!b) return;
+      document.querySelectorAll("#demo-timeline button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    });
   </script>
 </body>
 </html>

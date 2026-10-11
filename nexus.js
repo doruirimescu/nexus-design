@@ -28,6 +28,8 @@
  *   Nexus.chartStyles             every theme's chart style, by theme id
  *   Nexus.styleChart(data, layout) apply the chart style yourself -> { data, layout }
  *                                 (Plotly.newPlot / Plotly.react already do this)
+ *   Nexus.bands(list)             shaded x-ranges with labels (eras, regimes) -> { shapes, annotations }
+ *   Nexus.events(list)            dated vertical marker lines with labels -> { shapes, annotations }
  *   Nexus.rgba(color, alpha)      "#rrggbb" or "rgb(...)" -> "rgba(...)"
  *   Nexus.merge(base, extra)      deep merge of plain objects
  *
@@ -179,6 +181,10 @@
   //   line:   scale (× the page's width), min (px), dashes (cycled over line traces)
   //   marker: symbol (when the page sets none), ring (edge in --surface),
   //           hollow (open symbols), grow (+px)
+  //   area:   alpha (fill opacity of filled / stacked areas), edge "bg" (layers split by a
+  //           --bg line), pattern (a fillpattern shape: hatched areas)
+  //   band:   alpha (fill of Nexus.bands), edge (outline dash, or none), event (dash of
+  //           Nexus.events lines), label "mono" | "display" (label font)
   //   grid:   x / y: false (hidden) or a dash ("solid" | "dot" | "dash"); color (a colour key)
   //   axis:   line / xLine (colour key of the axis lines), frame (mirror them),
   //           ticks ("outside"), tickFont ("mono"), titleFont ("display"), size (font px)
@@ -190,11 +196,13 @@
       name: "Glass", description: "Rounded bars, ringed markers, dotted horizontal grid.",
       bar: { radius: 4 }, line: { scale: 1.1 }, marker: { ring: true },
       grid: { x: false, y: "dot" }, axis: {},
+      area: { alpha: 0.32 }, band: { alpha: 0.08, event: "dot" },
     },
     graphite: {
       name: "Blueprint", description: "Square bars, hairline grid on both axes, framed plot, mono ticks.",
       bar: { radius: 0 }, line: { scale: 0.8, min: 1.25 }, marker: { symbol: "square" },
       grid: { x: "solid", y: "solid" }, axis: { line: "borderStrong", frame: true, ticks: "outside", tickFont: "mono" },
+      area: { alpha: 0.16 }, band: { alpha: 0.05, edge: "dash", event: "dash", label: "mono" },
     },
     contrast: {
       name: "Bold", description: "Heavy lines with a dash pattern per series, outlined bars, larger type.",
@@ -202,22 +210,26 @@
       marker: { ring: true, grow: 2 },
       grid: { x: false, y: "solid", color: "borderStrong" }, axis: { line: "text", ticks: "outside", size: 13 },
       hover: { border: "text" },
+      area: { alpha: 0.62, edge: "bg" }, band: { alpha: 0.13, edge: "solid", event: "dash" },
     },
     daylight: {
       name: "Soft", description: "Softly rounded bars, hollow markers, light horizontal grid.",
       bar: { radius: 6 }, line: { scale: 1.25 }, marker: { hollow: true },
       grid: { x: false, y: "solid" }, axis: {},
+      area: { alpha: 0.26 }, band: { alpha: 0.07, event: "dot" },
     },
     paper: {
       name: "Print", description: "Square inked bars, a strong baseline, serif axis titles, open markers.",
       bar: { radius: 0, outline: "ink" }, line: { scale: 0.85, min: 1.25 }, marker: { hollow: true },
       grid: { x: false, y: "solid" }, axis: { xLine: "text", ticks: "outside", titleFont: "display" },
+      area: { alpha: 0.12, pattern: "/" }, band: { alpha: 0.06, edge: "solid", event: "dash", label: "display" },
     },
     terminal: {
       name: "Phosphor", description: "Wireframe bars, glowing traces, dotted oscilloscope graticule.",
       bar: { radius: 0, wire: 0.22 }, line: { scale: 1, min: 1.5 }, marker: { symbol: "square" },
       grid: { x: "dot", y: "dot" }, axis: { line: "borderStrong", frame: true, ticks: "outside", tickFont: "mono" },
       hover: { bg: "bg", border: "accent" }, glow: true,
+      area: { alpha: 0.1 }, band: { alpha: 0.07, edge: "dot", event: "dot", label: "mono" },
     },
   };
   const chartStyle = () => CHART_STYLES[applied] || CHART_STYLES[DEFAULT];
@@ -230,6 +242,10 @@
   const isMarkers = (t) => isScatter(t) &&
     (t.mode === undefined ? !(t.x && t.x.length >= 20) : String(t.mode).includes("markers"));
   const openSymbol = (s) => (typeof s === "string" && !s.endsWith("-open") ? `${s}-open` : s);
+  const isArea = (t) => isScatter(t) && ((t.fill && t.fill !== "none") || t.stackgroup !== undefined);
+  // A translucent fillcolor is the page's choice (a range band, say); an opaque or
+  // missing one leaves the fill opacity to the chart style.
+  const opaque = (v) => { const p = parseColor(v); return !p || p.a === 1; };
 
   // Over this many bars, outlines would swallow the thin bars and an x grid line per
   // category turns into noise: dense charts skip both.
@@ -255,12 +271,27 @@
         }
         out.marker = m;
       }
+      const area = isArea(t);
       if (isLines(t)) {
         const l = { ...(t.line || {}) };
-        l.width = Math.max(s.line.min || 0, Math.round((l.width || 2) * s.line.scale * 100) / 100);
-        if (s.line.dashes && !l.dash) l.dash = s.line.dashes[lineIndex % s.line.dashes.length];
-        lineIndex++;
+        // width 0 is a deliberate invisible edge (the lower bound of a range band): keep it.
+        if (l.width !== 0) l.width = Math.max(s.line.min || 0, Math.round((l.width || 2) * s.line.scale * 100) / 100);
+        // Areas keep solid edges: a dash pattern on a filled layer reads as noise.
+        // Invisible edges (width 0) take no slot in the dash cycle.
+        if (!area && l.width !== 0) {
+          if (s.line.dashes && !l.dash) l.dash = s.line.dashes[lineIndex % s.line.dashes.length];
+          lineIndex++;
+        }
+        if (area && s.area.edge === "bg" && t.stackgroup !== undefined) l.color = c.bg;
         out.line = l;
+      }
+      if (area && opaque(t.fillcolor)) {
+        const base = t.fillcolor || (t.line && t.line.color) || c.accent;
+        out.fillcolor = rgba(base, s.area.alpha);
+        if (s.area.edge === "bg" && t.stackgroup !== undefined) out.fillcolor = rgba(base, s.area.alpha + 0.2);
+        if (s.area.pattern && !t.fillpattern) {
+          out.fillpattern = { shape: s.area.pattern, fgcolor: rgba(base, 0.55), bgcolor: rgba(base, s.area.alpha), size: 7, solidity: 0.18 };
+        }
       }
       if (isMarkers(t)) {
         const m = { ...(t.marker || {}) };
@@ -311,6 +342,11 @@
       out[k] = ax;
     }
     if (s.axis.size) out.font = merge(out.font || {}, { size: s.axis.size });
+    if (Array.isArray(out.shapes)) out.shapes = out.shapes.map((sh) => styleMarkShape(sh, s, c));
+    if (Array.isArray(out.annotations) && s.band.label) {
+      out.annotations = out.annotations.map((a) => (isObj(a) && /^nexus-(band|event)/.test(a.name || "")
+        ? merge(a, { font: { family: family[s.band.label] } }) : a));
+    }
     if (s.hover) {
       out.hoverlabel = merge(out.hoverlabel || {}, {
         ...(s.hover.bg ? { bgcolor: c[s.hover.bg] } : {}),
@@ -318,6 +354,58 @@
       });
     }
     return out;
+  }
+
+  // Shapes made by Nexus.bands / Nexus.events carry a name, so each theme can draw
+  // them its own way: band opacity and outline, event-line dash.
+  function styleMarkShape(sh, s, c) {
+    if (!isObj(sh) || typeof sh.name !== "string") return sh;
+    if (sh.name === "nexus-band") {
+      const col = parseColor(sh.fillcolor) ? sh.fillcolor : c.accent;
+      return { ...sh, fillcolor: rgba(col, s.band.alpha),
+        line: s.band.edge ? { color: rgba(col, 0.5), width: 1, dash: s.band.edge } : { width: 0 } };
+    }
+    if (sh.name === "nexus-event") {
+      return { ...sh, line: { ...(sh.line || {}), dash: s.band.event || "dot", width: s.line.scale >= 1.5 ? 1.5 : 1 } };
+    }
+    return sh;
+  }
+
+  // ---------- Bands and event lines ----------
+  //
+  // Nexus.bands([{ x0, x1, label, tone }]) shades x-ranges (eras, regimes, recessions);
+  // Nexus.events([{ x, label, tone }]) draws dated vertical lines. Both return
+  // { shapes, annotations } to spread into a layout. tone is a Nexus.colors key
+  // ("accent" by default, or "series2", "neutral", "positive", "negative"); labels use
+  // the matching ink colour. Labels sit at the top of the plot; pass labelY (0-1) to
+  // stagger them, or label: "" to leave one out.
+  const INK = { accent: "accentInk", positive: "positiveInk", negative: "negativeInk", series2: "series2Ink", neutral: "muted" };
+  const mid = (a, b) => {
+    const ta = Date.parse(a), tb = Date.parse(b);
+    if (typeof a === "string" && !isNaN(ta) && !isNaN(tb)) return new Date((ta + tb) / 2).toISOString().slice(0, 10);
+    return (Number(a) + Number(b)) / 2;
+  };
+  function marks(list, kind) {
+    const c = colors(), s = chartStyle();
+    const shapes = [], annotations = [];
+    for (const b of list || []) {
+      const tone = c[b.tone] ? b.tone : "accent";
+      const col = c[tone], ink = c[INK[tone]] || c.muted;
+      if (kind === "band") {
+        shapes.push(styleMarkShape({ type: "rect", name: "nexus-band", xref: "x", yref: "paper", x0: b.x0, x1: b.x1, y0: 0, y1: 1,
+          fillcolor: col, layer: "below" }, s, c));
+      } else {
+        shapes.push(styleMarkShape({ type: "line", name: "nexus-event", xref: "x", yref: "paper", x0: b.x, x1: b.x, y0: 0, y1: 1,
+          line: { color: rgba(col, 0.8) }, layer: "above" }, s, c));
+      }
+      if (b.label) {
+        annotations.push({ name: `nexus-${kind}-label`, xref: "x", yref: "paper", showarrow: false,
+          x: kind === "band" ? mid(b.x0, b.x1) : b.x, y: b.labelY === undefined ? 1 : b.labelY, yanchor: "top",
+          xanchor: kind === "band" ? "center" : "left", xshift: kind === "band" ? 0 : 3,
+          text: b.label, font: { size: 11, color: ink }, captureevents: false });
+      }
+    }
+    return { shapes, annotations };
   }
 
   function styleChart(data, layout) {
@@ -611,6 +699,8 @@
     get chartStyle() { const s = chartStyle(); return { name: s.name, description: s.description }; },
     chartStyles: Object.fromEntries(Object.entries(CHART_STYLES).map(([id, s]) => [id, { name: s.name, description: s.description }])),
     styleChart,
+    bands: (list) => marks(list, "band"),
+    events: (list) => marks(list, "event"),
     rgba,
     merge,
   };
