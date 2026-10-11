@@ -74,6 +74,11 @@ html[data-theme="terminal"] body::after {
 html[data-theme="terminal"] body { font-size: 14px; }
 [data-theme="terminal"] .btn, [data-theme="terminal"] .date-bar select, [data-theme="terminal"] .input { font-size: 13px; }
 [data-theme="terminal"] ::selection { background: var(--accent); color: var(--on-accent); }
+/* Phosphor chart traces: nexus.js copies each line's and bar's colour into `color`. */
+[data-theme="terminal"] .js-plotly-plot .scatterlayer .js-line { filter: drop-shadow(0 0 3px currentColor); }
+[data-theme="terminal"] .js-plotly-plot .barlayer .point path { filter: drop-shadow(0 0 4px currentColor); }
 @media (prefers-contrast: more) {
   html[data-theme="terminal"] body::after { display: none; }
+  [data-theme="terminal"] .js-plotly-plot .scatterlayer .js-line,
+  [data-theme="terminal"] .js-plotly-plot .barlayer .point path { filter: none; }
 }

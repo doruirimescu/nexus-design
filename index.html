@@ -132,6 +132,20 @@
         <div class="legend"><span><i class="sw-under"></i>Undervalued</span><span><i class="sw-over"></i>Overvalued</span><span><i class="ln sw-accent"></i>Average</span></div></div>
       <div id="chart" class="chart h-md"></div>
     </div>
+    <p class="muted small">Chart style for this theme: <strong id="chart-style-name"></strong> <span id="chart-style-desc"></span>
+      Every theme draws marks and axes its own way; the page only supplies data and colours.</p>
+    <div class="two-col">
+      <div class="panel chart-panel">
+        <div class="chart-head"><h3>Price vs fair value</h3>
+          <div class="legend"><span><i class="ln sw-accent"></i>Price</span><span><i class="ln sw-series-2"></i>Fair value</span></div></div>
+        <div id="chart-lines" class="chart h-sm"></div>
+      </div>
+      <div class="panel chart-panel">
+        <div class="chart-head"><h3>Gap vs score</h3>
+          <div class="legend"><span><i class="sw-under"></i>Undervalued</span><span><i class="sw-over"></i>Overvalued</span></div></div>
+        <div id="chart-scatter" class="chart h-sm"></div>
+      </div>
+    </div>
 
     <h2 class="section">Text blocks</h2>
     <div class="prose">
@@ -174,9 +188,14 @@
       const b = e.target.closest("[data-pick]");
       if (b) Nexus.setTheme(b.dataset.pick);
     });
+    function drawChartStyle() {
+      document.getElementById("chart-style-name").textContent = Nexus.chartStyle.name + ".";
+      document.getElementById("chart-style-desc").textContent = Nexus.chartStyle.description;
+    }
     drawSwatches();
     drawThemes();
-    Nexus.onThemeChange(() => { drawSwatches(); drawThemes(); });
+    drawChartStyle();
+    Nexus.onThemeChange(() => { drawSwatches(); drawThemes(); drawChartStyle(); });
 
     const syms = ["INTU", "ADBE", "PDD", "BKNG", "CMCSA", "AAPL", "MSFT", "NVDA", "AMD", "PLTR", "ARM", "TSLA"];
     const vals = [65, 58, 56, 54, 12, -34, -22, -21, -54, -73, -85, -82];
@@ -190,6 +209,21 @@
         yaxis: { ticksuffix: "%" }, bargap: 0.25, showlegend: false,
         shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: -5.6, y1: -5.6, line: { color: C.accent, dash: "dash", width: 1.5 } }],
       }), Nexus.plotlyConfig);
+
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct"];
+      Plotly.newPlot("chart-lines", [
+        { type: "scatter", mode: "lines+markers", name: "Price", x: months, y: [142, 151, 147, 160, 171, 166, 182, 178, 190, 186],
+          line: { color: C.accent, width: 2 }, hovertemplate: "%{x}: $%{y}<extra>Price</extra>" },
+        { type: "scatter", mode: "lines", name: "Fair value", x: months, y: [150, 152, 155, 157, 160, 163, 165, 168, 171, 173],
+          line: { color: C.series2, width: 2 }, hovertemplate: "%{x}: $%{y}<extra>Fair value</extra>" },
+      ], Nexus.plotlyLayout({ yaxis: { tickprefix: "$", title: { text: "USD" } }, showlegend: false, margin: { t: 8 } }), Nexus.plotlyConfig);
+
+      const score = [82, 74, 70, 66, 55, 41, 47, 44, 30, 22, 15, 18];
+      Plotly.newPlot("chart-scatter", [{
+        type: "scatter", mode: "markers", x: score, y: vals, text: syms,
+        marker: { color: vals.map((v) => (v >= 0 ? C.positive : C.negative)), size: 9 },
+        hovertemplate: "%{text}: score %{x}, gap %{y}%<extra></extra>",
+      }], Nexus.plotlyLayout({ xaxis: { title: { text: "Fair Value score" } }, yaxis: { ticksuffix: "%", zeroline: true }, showlegend: false, margin: { t: 8 } }), Nexus.plotlyConfig);
     }
   </script>
 </body>

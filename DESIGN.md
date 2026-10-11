@@ -39,14 +39,14 @@ markup.
 
 ## Themes
 
-| Id | Name | Scheme | Character | Type (display / body / mono) |
-|---|---|---|---|---|
-| `midnight` | Midnight | dark | Deep navy, blue accent. The default and the original look. | Inter / Inter / JetBrains Mono |
-| `graphite` | Graphite | dark | Neutral charcoal, periwinkle accent. | IBM Plex Sans / IBM Plex Sans / IBM Plex Mono |
-| `contrast` | High contrast | dark | Black and white, brighter marks. | Atkinson Hyperlegible Next / same / Atkinson Hyperlegible Mono |
-| `daylight` | Daylight | light | Cool white surfaces, slate text. | Manrope / Manrope / JetBrains Mono |
-| `paper` | Paper | light | Warm cream, ink-blue accent. | Newsreader / Source Sans 3 / IBM Plex Mono |
-| `terminal` | Terminal | dark | Green-phosphor CRT, reimagined: green UI; cyan (under), amber (over) and magenta (second series) for data; faint scanlines, glow on display type only. | VT323 / JetBrains Mono / JetBrains Mono |
+| Id | Name | Scheme | Character | Type (display / body / mono) | Chart style |
+|---|---|---|---|---|---|
+| `midnight` | Midnight | dark | Deep navy, blue accent. The default and the original look. | Inter / Inter / JetBrains Mono | Glass |
+| `graphite` | Graphite | dark | Neutral charcoal, periwinkle accent. | IBM Plex Sans / IBM Plex Sans / IBM Plex Mono | Blueprint |
+| `contrast` | High contrast | dark | Black and white, brighter marks. | Atkinson Hyperlegible Next / same / Atkinson Hyperlegible Mono | Bold |
+| `daylight` | Daylight | light | Cool white surfaces, slate text. | Manrope / Manrope / JetBrains Mono | Soft |
+| `paper` | Paper | light | Warm cream, ink-blue accent. | Newsreader / Source Sans 3 / IBM Plex Mono | Print |
+| `terminal` | Terminal | dark | Green-phosphor CRT, reimagined: green UI; cyan (under), amber (over) and magenta (second series) for data; faint scanlines, glow on display type only. | VT323 / JetBrains Mono / JetBrains Mono | Phosphor |
 
 Viewers can also pick **Match system**, which follows the device's light/dark
 setting (Daylight or Midnight).
@@ -89,6 +89,7 @@ How it works:
    Marks (`--under`, `--over`, `--series-2`, `--neutral`) need ≥ 3:1.
 5. Keep the chart tokens (the ones in `TOKENS` in `nexus.js`) distinct from each
    other within the theme. The chart re-colouring relies on it.
+   Add the theme's chart style to `CHART_STYLES` in `nexus.js` (see "Chart styles").
 6. Add a row to the table above, then open `index.html` and look at every
    section in the new theme.
 
@@ -232,8 +233,35 @@ Use Plotly with `nexus.js`, so charts follow the theme:
 - Legend swatches: `<i class="sw-under">`, `sw-over`, `sw-accent`, `sw-neutral`,
   `sw-series-2`; `.ln` for a line, `.band` for a translucent band.
 - Use one y-axis per chart; never two y-axes.
+- Don't hand-style marks or axes for the look (bar corners, line weight, marker
+  shape, gridlines); the chart style does that per theme (below).
 - Every chart has a hover tooltip, and a legend when it has two or more series.
 - For a categorical series beyond the polarity pair, use `accent`, then `series2`.
+
+### Chart styles
+
+Each theme also has a chart style: how marks and axes are drawn. Colours still come
+from the page. `nexus.js` applies it to every `Plotly.newPlot` / `Plotly.react` call,
+and restyles drawn charts on a theme switch, so pages need no code for it.
+
+| Style | Theme | Bars | Lines and markers | Grid and axes |
+|---|---|---|---|---|
+| Glass | Midnight | rounded 4px | ×1.1 weight, markers ringed in `--surface` | dotted horizontal grid, no axis lines |
+| Blueprint | Graphite | square | ×0.8 weight, square markers | hairline grid on both axes, framed plot, outside ticks, mono tick labels |
+| Bold | High contrast | 2px corners, 1.5px `--bg` outline | ×1.5 weight (min 2.5px), dash pattern per line series, larger ringed markers | strong horizontal grid, `--text` axis lines, 13px type |
+| Soft | Daylight | rounded 6px | ×1.25 weight, hollow markers | light horizontal grid, no axis lines |
+| Print | Paper | square, thin ink outline | ×0.85 weight, open markers | horizontal grid, `--text` baseline, outside ticks, serif axis titles |
+| Phosphor | Terminal | wireframe (outline over a 22% fill) | glowing traces, square markers | dotted graticule on both axes, framed plot, mono tick labels |
+
+- Explicit page settings win where they are a choice rather than a look: `showgrid`,
+  `dash`, `marker.symbol`, an existing bar `marker.line`. Corner radius and line
+  weight always come from the style (line weight scales the page's width).
+- Charts with more than 60 bars skip bar outlines and the vertical grid.
+- `Nexus.chartStyle` is the current style's `{ name, description }`;
+  `Nexus.styleChart(data, layout)` applies it by hand for code that bypasses
+  `Plotly.newPlot` / `react`. Opt a page out with `<html data-nexus-chart-style="off">`.
+- Glow (Phosphor) is CSS in `themes/terminal.css`; `nexus.js` copies each trace's
+  colour into `color` so the drop-shadow can use `currentColor`.
 
 ## Changing the design system
 

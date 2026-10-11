@@ -24,12 +24,20 @@
  *   Nexus.token(name)             any CSS token, e.g. Nexus.token("--surface-3")
  *   Nexus.plotlyLayout(extra)     themed Plotly layout, deep-merged with `extra`
  *   Nexus.plotlyConfig            Plotly config (responsive, no logo, trimmed mode bar)
+ *   Nexus.chartStyle              the current theme's chart style { name, description }
+ *   Nexus.chartStyles             every theme's chart style, by theme id
+ *   Nexus.styleChart(data, layout) apply the chart style yourself -> { data, layout }
+ *                                 (Plotly.newPlot / Plotly.react already do this)
  *   Nexus.rgba(color, alpha)      "#rrggbb" or "rgb(...)" -> "rgba(...)"
  *   Nexus.merge(base, extra)      deep merge of plain objects
  *
- * On a theme switch every Plotly chart on the page is re-coloured: each colour that
- * matched a token of the old theme becomes the same token of the new one. Pages that
- * compute colours in other ways can redraw in Nexus.onThemeChange().
+ * Each theme also has a chart style (bar corners, line weight, markers, grid, axis
+ * frame), applied to every Plotly.newPlot / Plotly.react call; opt out with
+ * <html data-nexus-chart-style="off">.
+ *
+ * On a theme switch every Plotly chart on the page is re-coloured and restyled: each
+ * colour that matched a token of the old theme becomes the same token of the new one.
+ * Pages that compute colours in other ways can redraw in Nexus.onThemeChange().
  */
 (function () {
   "use strict";
@@ -158,6 +166,228 @@
   }
   const plotlyConfig = { responsive: true, displaylogo: false, modeBarButtonsToRemove: ["lasso2d", "select2d"] };
 
+  // ---------- Chart styles ----------
+  //
+  // Each theme has a chart style: how marks and axes are drawn (bar corners and
+  // outlines, line weight, marker shape, gridlines, axis frame, tick font). Colours
+  // still come from the page. Every Plotly.newPlot / Plotly.react call is styled
+  // automatically, and a theme switch restyles the charts already drawn. Opt a page
+  // out with <html data-nexus-chart-style="off">.
+  //
+  //   bar:    radius (corner px); outline "bg" | "ink" (an edge in that colour);
+  //           wire (fill alpha: bars become outlines over a faint fill)
+  //   line:   scale (× the page's width), min (px), dashes (cycled over line traces)
+  //   marker: symbol (when the page sets none), ring (edge in --surface),
+  //           hollow (open symbols), grow (+px)
+  //   grid:   x / y: false (hidden) or a dash ("solid" | "dot" | "dash"); color (a colour key)
+  //   axis:   line / xLine (colour key of the axis lines), frame (mirror them),
+  //           ticks ("outside"), tickFont ("mono"), titleFont ("display"), size (font px)
+  //   hover:  bg / border (colour keys)
+  //   glow:   lines and bars glow (drawn by the theme's CSS)
+  // Charts with more than DENSE bars skip bar outlines and the x grid.
+  const CHART_STYLES = {
+    midnight: {
+      name: "Glass", description: "Rounded bars, ringed markers, dotted horizontal grid.",
+      bar: { radius: 4 }, line: { scale: 1.1 }, marker: { ring: true },
+      grid: { x: false, y: "dot" }, axis: {},
+    },
+    graphite: {
+      name: "Blueprint", description: "Square bars, hairline grid on both axes, framed plot, mono ticks.",
+      bar: { radius: 0 }, line: { scale: 0.8, min: 1.25 }, marker: { symbol: "square" },
+      grid: { x: "solid", y: "solid" }, axis: { line: "borderStrong", frame: true, ticks: "outside", tickFont: "mono" },
+    },
+    contrast: {
+      name: "Bold", description: "Heavy lines with a dash pattern per series, outlined bars, larger type.",
+      bar: { radius: 2, outline: "bg" }, line: { scale: 1.5, min: 2.5, dashes: ["solid", "dash", "dot", "dashdot"] },
+      marker: { ring: true, grow: 2 },
+      grid: { x: false, y: "solid", color: "borderStrong" }, axis: { line: "text", ticks: "outside", size: 13 },
+      hover: { border: "text" },
+    },
+    daylight: {
+      name: "Soft", description: "Softly rounded bars, hollow markers, light horizontal grid.",
+      bar: { radius: 6 }, line: { scale: 1.25 }, marker: { hollow: true },
+      grid: { x: false, y: "solid" }, axis: {},
+    },
+    paper: {
+      name: "Print", description: "Square inked bars, a strong baseline, serif axis titles, open markers.",
+      bar: { radius: 0, outline: "ink" }, line: { scale: 0.85, min: 1.25 }, marker: { hollow: true },
+      grid: { x: false, y: "solid" }, axis: { xLine: "text", ticks: "outside", titleFont: "display" },
+    },
+    terminal: {
+      name: "Phosphor", description: "Wireframe bars, glowing traces, dotted oscilloscope graticule.",
+      bar: { radius: 0, wire: 0.22 }, line: { scale: 1, min: 1.5 }, marker: { symbol: "square" },
+      grid: { x: "dot", y: "dot" }, axis: { line: "borderStrong", frame: true, ticks: "outside", tickFont: "mono" },
+      hover: { bg: "bg", border: "accent" }, glow: true,
+    },
+  };
+  const chartStyle = () => CHART_STYLES[applied] || CHART_STYLES[DEFAULT];
+  const chartStylesOn = () => root.dataset.nexusChartStyle !== "off";
+
+  const fade = (v, a) => (Array.isArray(v) ? v.map((x) => fade(x, a)) : rgba(v, a));
+  const isScatter = (t) => (t.type || "scatter") === "scatter" || t.type === "scattergl";
+  // Plotly's default mode is lines, plus markers below 20 points.
+  const isLines = (t) => isScatter(t) && (t.mode === undefined || String(t.mode).includes("lines"));
+  const isMarkers = (t) => isScatter(t) &&
+    (t.mode === undefined ? !(t.x && t.x.length >= 20) : String(t.mode).includes("markers"));
+  const openSymbol = (s) => (typeof s === "string" && !s.endsWith("-open") ? `${s}-open` : s);
+
+  // Over this many bars, outlines would swallow the thin bars and an x grid line per
+  // category turns into noise: dense charts skip both.
+  const DENSE = 60;
+  const isDense = (data) => data.some((t) => isObj(t) && (t.type === "bar" || t.type === "histogram") &&
+    Math.max((t.x || []).length, (t.y || []).length) > DENSE);
+
+  function styleTraces(data, s, c, dense) {
+    let lineIndex = 0;
+    return data.map((t) => {
+      if (!isObj(t)) return t;
+      const out = { ...t };
+      if (t.type === "bar" || t.type === "histogram") {
+        const m = { ...(t.marker || {}) };
+        m.cornerradius = s.bar.radius;
+        const fill = m.color !== undefined ? m.color : c.accent;
+        if (s.bar.wire) {
+          m.color = fade(fill, s.bar.wire);
+          m.line = { ...(m.line || {}), color: fill, width: 1.5 };
+        } else if (s.bar.outline && !dense && !(m.line && m.line.width)) {
+          const ink = s.bar.outline === "ink";
+          m.line = { ...(m.line || {}), color: ink ? rgba(c.text, 0.55) : c.bg, width: ink ? 0.75 : 1.5 };
+        }
+        out.marker = m;
+      }
+      if (isLines(t)) {
+        const l = { ...(t.line || {}) };
+        l.width = Math.max(s.line.min || 0, Math.round((l.width || 2) * s.line.scale * 100) / 100);
+        if (s.line.dashes && !l.dash) l.dash = s.line.dashes[lineIndex % s.line.dashes.length];
+        lineIndex++;
+        out.line = l;
+      }
+      if (isMarkers(t)) {
+        const m = { ...(t.marker || {}) };
+        const color = m.color !== undefined ? m.color : t.line && t.line.color;
+        if (s.marker.symbol && m.symbol === undefined) m.symbol = s.marker.symbol;
+        if (s.marker.grow) m.size = (m.size || 6) + s.marker.grow;
+        if (s.marker.hollow) {
+          m.symbol = openSymbol(m.symbol || "circle");
+          m.line = { ...(m.line || {}), width: Math.max(1.5, (m.line && m.line.width) || 0) };
+          if (color !== undefined) m.line.color = color;
+        } else if (s.marker.ring && !(m.line && m.line.width)) {
+          m.line = { ...(m.line || {}), color: c.surface, width: 1 };
+        }
+        out.marker = m;
+      }
+      return out;
+    });
+  }
+
+  function styleLayout(layout, s, c, dense) {
+    const out = { ...(layout || {}) };
+    const family = { mono: token("--mono"), display: token("--font-display") };
+    const axes = new Set(["xaxis", "yaxis", ...Object.keys(out).filter((k) => /^[xy]axis\d*$/.test(k))]);
+    for (const k of axes) {
+      const dim = k[0];
+      const ax = { ...(out[k] || {}) };
+      const g = dense && dim === "x" ? false : s.grid[dim];
+      if (g === false) { if (ax.showgrid === undefined) ax.showgrid = false; }
+      else if (g) { if (ax.showgrid === undefined) ax.showgrid = true; if (ax.griddash === undefined) ax.griddash = g; }
+      // The base layout's border-coloured grid and axis lines count as unset.
+      if (s.grid.color && (ax.gridcolor === undefined || ax.gridcolor === c.border)) ax.gridcolor = c[s.grid.color];
+      const line = (dim === "x" && s.axis.xLine) || s.axis.line;
+      if (line && ax.showline === undefined) {
+        ax.showline = true;
+        if (ax.linecolor === undefined || ax.linecolor === c.border) ax.linecolor = c[line];
+        if (s.axis.frame && ax.mirror === undefined) ax.mirror = true;
+      }
+      if (s.axis.ticks && ax.ticks === undefined) {
+        ax.ticks = s.axis.ticks;
+        ax.ticklen = 4;
+        if (ax.tickcolor === undefined) ax.tickcolor = c[line || "borderStrong"];
+      }
+      if (s.axis.tickFont) ax.tickfont = merge({ family: family[s.axis.tickFont] }, ax.tickfont);
+      if (s.axis.titleFont && ax.title) {
+        const title = isObj(ax.title) ? ax.title : { text: ax.title };
+        ax.title = merge({ font: { family: family[s.axis.titleFont], size: 14 } }, title);
+      }
+      out[k] = ax;
+    }
+    if (s.axis.size) out.font = merge(out.font || {}, { size: s.axis.size });
+    if (s.hover) {
+      out.hoverlabel = merge(out.hoverlabel || {}, {
+        ...(s.hover.bg ? { bgcolor: c[s.hover.bg] } : {}),
+        ...(s.hover.border ? { bordercolor: c[s.hover.border] } : {}),
+      });
+    }
+    return out;
+  }
+
+  function styleChart(data, layout) {
+    if (!chartStylesOn()) return { data, layout };
+    const s = chartStyle(), c = colors(), dense = isDense(data || []);
+    return { data: styleTraces(data || [], s, c, dense), layout: styleLayout(layout, s, c, dense) };
+  }
+
+  // The page's own (unstyled) data and layout for each chart, so a theme switch
+  // restyles from them rather than from the previous theme's styled version.
+  const sources = new WeakMap();
+  const el = (gd) => (typeof gd === "string" ? document.getElementById(gd) : gd);
+
+  // Glow: lines and bars copy their stroke into `color`, so the theme's CSS can
+  // draw a drop-shadow in currentColor.
+  function glow(gd) {
+    if (!chartStyle().glow || !chartStylesOn()) return;
+    gd.querySelectorAll(".scatterlayer .js-line, .barlayer .point path").forEach((p) => {
+      p.style.color = p.style.stroke && p.style.stroke !== "none" ? p.style.stroke : p.style.fill;
+    });
+  }
+
+  function wrapPlotly(P) {
+    if (!P || P.__nexus) return P;
+    const raw = { newPlot: P.newPlot, react: P.react, restyle: P.restyle };
+    const draw = (fn) => function (gd, data, layout, config) {
+      if (isObj(data)) ({ data, layout, config } = data); // newPlot(gd, { data, layout, config })
+      const node = el(gd);
+      if (node) sources.set(node, { data: data || [], layout: layout || {} });
+      const styled = styleChart(data, layout);
+      const done = fn.call(P, gd, styled.data, styled.layout, config);
+      if (node) Promise.resolve(done).then(() => {
+        if (!node.__nexusGlow && node.on) { node.__nexusGlow = true; node.on("plotly_afterplot", () => glow(node)); }
+        glow(node);
+      });
+      return done;
+    };
+    P.newPlot = draw(raw.newPlot);
+    P.react = draw(raw.react);
+    // Carry simple top-level restyles (e.g. toggling `visible`) into the stored source.
+    P.restyle = function (gd, update, indices) {
+      const src = sources.get(el(gd));
+      if (src && isObj(update)) {
+        const idx = indices === undefined ? src.data.map((_, i) => i) : [].concat(indices);
+        src.data = src.data.map((t, i) => {
+          const j = idx.indexOf(i);
+          if (j < 0) return t;
+          const u = { ...t };
+          for (const [k, v] of Object.entries(update)) if (!k.includes(".")) u[k] = Array.isArray(v) ? v[j % v.length] : v;
+          return u;
+        });
+      }
+      return raw.restyle.apply(P, arguments);
+    };
+    P.__nexus = true;
+    return P;
+  }
+  // nexus.js loads before Plotly, so catch the global as Plotly's bundle assigns it.
+  if (window.Plotly) wrapPlotly(window.Plotly);
+  else {
+    let held;
+    try {
+      Object.defineProperty(window, "Plotly", {
+        configurable: true, enumerable: true,
+        get: () => held,
+        set: (v) => { held = wrapPlotly(v); },
+      });
+    } catch (e) { /* charts keep the base style */ }
+  }
+
   // Re-colour every Plotly chart from the old theme's tokens to the new theme's.
   function rethemePlots(prev, next) {
     if (!window.Plotly) return;
@@ -196,11 +426,21 @@
       }
       return v;
     };
+    const fonts = { font: { family: font() }, hoverlabel: { font: { family: font() } } };
     document.querySelectorAll(".js-plotly-plot").forEach((gd) => {
       if (!gd.data || !gd.layout) return;
       try {
-        const layout = merge(walk(gd.layout, false), { font: { family: font() }, hoverlabel: { font: { family: font() } } });
-        window.Plotly.react(gd, gd.data.map((t) => walk(t, false)), layout, gd._context || plotlyConfig);
+        const src = sources.get(gd);
+        if (!src) {
+          window.Plotly.react(gd, gd.data.map((t) => walk(t, false)), merge(walk(gd.layout, false), fonts), gd._context || plotlyConfig);
+          return;
+        }
+        // Restyle from the page's version; keep the viewer's zoom.
+        const layout = merge(walk(src.layout, false), fonts);
+        for (const k of Object.keys(gd.layout).filter((k) => /^[xy]axis\d*$/.test(k))) {
+          if (gd.layout[k].autorange === false) layout[k] = merge(layout[k] || {}, { range: gd.layout[k].range, autorange: false });
+        }
+        window.Plotly.react(gd, src.data.map((t) => walk(t, false)), layout, gd._context || plotlyConfig);
       } catch (e) { /* a chart that can't be re-coloured keeps its old colours */ }
     });
   }
@@ -255,7 +495,8 @@
       '<i style="background:var(--accent)"></i><i style="background:var(--under)"></i><i style="background:var(--over)"></i></span></span>';
   const option = (t) =>
     `<label class="nx-theme-option"><input type="radio" name="nx-theme" value="${t.id}">${preview(t.id)}` +
-    `<strong>${esc(t.name)}</strong><small>${esc(t.description)}</small></label>`;
+    `<strong>${esc(t.name)}</strong><small>${esc(t.description)}` +
+    (CHART_STYLES[t.id] ? ` Charts: ${esc(CHART_STYLES[t.id].name)}.` : "") + "</small></label>";
 
   function syncPanel() {
     if (!panel) return;
@@ -358,7 +599,7 @@
   else init();
 
   window.Nexus = {
-    themes: THEMES.map((t) => ({ ...t })),
+    themes: THEMES.map((t) => ({ ...t, chartStyle: CHART_STYLES[t.id].name })),
     get theme() { return applied; },
     get choice() { return choice; },
     setTheme,
@@ -367,6 +608,9 @@
     token,
     plotlyLayout,
     plotlyConfig,
+    get chartStyle() { const s = chartStyle(); return { name: s.name, description: s.description }; },
+    chartStyles: Object.fromEntries(Object.entries(CHART_STYLES).map(([id, s]) => [id, { name: s.name, description: s.description }])),
+    styleChart,
     rgba,
     merge,
   };
