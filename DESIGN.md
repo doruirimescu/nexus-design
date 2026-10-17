@@ -34,8 +34,9 @@ markup.
    per paragraph.
 7. **Numbers** are tabular (already set on tables and KPIs) and right-aligned in
    tables (`td.num`).
-8. **Mobile.** Layouts must work at 390px wide with no horizontal page scroll.
-   Wide tables go inside `.table-wrap`, which scrolls on its own.
+8. **Mobile.** Layouts must work from 320px wide with no horizontal page scroll.
+   Wide tables go inside `.table-wrap`, which scrolls on its own; on phones,
+   give them `data-list` so they become lists (see [Phones](#phones-the-app-shell-and-list-tables)).
 
 ## Themes
 
@@ -229,6 +230,65 @@ Separate sections with `<h2 class="section">Title</h2>`.
 ```
 
 Helpers: `.muted`, `.faint`, `.small`, `.scroll-y`, `.gradient-text`, `.hl-accent`, `<mark>`.
+
+## Phones: the app shell and list tables
+
+On phones (up to 640px wide, or a phone in landscape) `nexus.js` and `nexus.css`
+make a site feel like an iPhone app, and it can be added to the home screen.
+
+**Always, with no markup:** `viewport-fit=cover` and the home-screen meta tags are
+added, the status bar follows the theme (`theme-color`), content clears the notch
+and home indicator, fields use 16px text (no zoom on focus), controls are at least
+44pt tall, the theme panel is a bottom sheet, KPI tiles sit two per row, the page
+never pans sideways, and Plotly charts drop their mode bar and drag-zoom on touch
+screens (a drag scrolls the page; taps still show values). Opt out of the chart
+behaviour with `<html data-nexus-touch-charts="off">`. In the home-screen app,
+pinch and double-tap zoom are off; in the browser they stay.
+
+**Tab bar (opt in per site):** put a `manifest.webmanifest` next to the site's home
+page (found through `<link rel="manifest">` or the `.brand` link). Its `shortcuts`
+become a floating tab bar: up to five tabs, or four plus **More** (a sheet,
+grouped like iOS Settings). The top bar's `.nav` hides on phones. Extra members on
+each shortcut: `nexus_icon` (`home`, `chart`, `bars`, `target`, `globe`, `layers`,
+`pie`, `gauge`, `book`, `doc`, `calculator`, `wallet`), `nexus_match` (path
+prefixes, relative to the manifest, that select the tab) and `nexus_group` (the
+section heading in More). Scrolling down shrinks the bar to one round button and
+moves a `.dock` into its row; scrolling up restores it. Opt out with
+`<html data-nexus-tabs="off">`.
+
+```json
+{ "name": "Investing Nexus", "short_name": "Nexus", "start_url": "index.html", "display": "standalone",
+  "icons": [{ "src": "icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }],
+  "shortcuts": [
+    { "name": "Home", "url": "index.html", "nexus_icon": "home", "nexus_match": ["index.html"] },
+    { "name": "S&P 500", "url": "sp500_today.html", "nexus_icon": "bars", "nexus_match": ["sp500_"] },
+    { "name": "Learn", "url": "learn/index.html", "nexus_icon": "book", "nexus_group": "Research" } ] }
+```
+
+**List tables:** `<table class="data" data-list>` turns into an iOS list on phones.
+Each `<th>` names its column's role: `data-list="title"` (first line, left; default
+the first column), `"subtitle"` (second line, left), `"value"` (first line, right:
+the number that matters) and `"note"` (second line, right). `data-list-prefix` /
+`data-list-suffix` add words around a cell ("Solvency 77", "22 stocks"). A tap
+opens a bottom sheet with every column and an **Open** button when the row has a
+link. Tables with 12+ rows get a Sort menu (`th.sortable` columns are sorted by the
+page, which should set `aria-sort`; others by `<td data-sort>` or the cell text;
+`<th data-sort-dir="asc">` starts ascending). Rows that already show every column
+and have no link get no chevron.
+
+```html
+<table class="data" data-list>
+  <thead><tr><th data-list="title">Symbol</th><th data-list="subtitle">Company</th>
+    <th class="num" data-list="value">Valuation</th><th class="num" data-list="note" data-list-prefix="Solvency">Solvency</th></tr></thead>
+  …
+</table>
+<!-- Keep the page's own row tap (select, navigate) instead of the sheet -->
+<table class="data" data-list data-list-tap="native">…</table>
+<!-- Sheet button that performs the row's own tap; a following <tr data-list-detail> shows in the sheet -->
+<table class="data" data-list data-list-action="Zoom charts to this trade">…</table>
+<!-- Reference and comparison tables: each row a card, cells under their column labels -->
+<table class="data" data-list="cards">…</table>
+```
 
 ## Charts
 

@@ -450,6 +450,9 @@
     });
   }
 
+  const touchCharts = () => root.dataset.nexusTouchCharts !== "off" &&
+    !!window.matchMedia && matchMedia("(hover: none) and (pointer: coarse)").matches;
+
   function wrapPlotly(P) {
     if (!P || P.__nexus) return P;
     const raw = { newPlot: P.newPlot, react: P.react, restyle: P.restyle };
@@ -458,6 +461,12 @@
       const node = el(gd);
       if (node) sources.set(node, { data: data || [], layout: layout || {} });
       const styled = styleChart(data, layout);
+      // Touch screens: a finger drag scrolls the page instead of zooming the chart, and
+      // the mode bar (which needs hover and covers the plot) is hidden. Taps still show values.
+      if (touchCharts()) {
+        styled.layout = merge(styled.layout || {}, { dragmode: false });
+        config = { ...(config || {}), displayModeBar: false, scrollZoom: false };
+      }
       const done = fn.call(P, gd, styled.data, styled.layout, config);
       if (node) Promise.resolve(done).then(() => {
         if (!node.__nexusGlow && node.on) { node.__nexusGlow = true; node.on("plotly_afterplot", () => glow(node)); }
@@ -555,6 +564,35 @@
     });
   }
 
+  // ---------- Home-screen web app: head tags and status bar colour ----------
+
+  // Pages only need the usual viewport tag; this adds what iOS and Android read when the
+  // page is added to the home screen. viewport-fit=cover lets the layout use the safe-area
+  // insets (notch, Dynamic Island, home indicator); nexus.css pads for them.
+  function headTag(attrs) {
+    const el = document.createElement(attrs.rel ? "link" : "meta");
+    for (const k in attrs) el.setAttribute(k, attrs[k]);
+    document.head.appendChild(el);
+    return el;
+  }
+  function setupHead() {
+    const vp = document.querySelector('meta[name="viewport"]');
+    if (vp && !/viewport-fit/.test(vp.content)) vp.content += ", viewport-fit=cover";
+    const has = (name) => document.querySelector(`meta[name="${name}"]`);
+    if (!has("mobile-web-app-capable")) headTag({ name: "mobile-web-app-capable", content: "yes" });
+    if (!has("apple-mobile-web-app-capable")) headTag({ name: "apple-mobile-web-app-capable", content: "yes" });
+    // "default" lets the status bar take theme-color, so it follows light and dark themes.
+    if (!has("apple-mobile-web-app-status-bar-style")) headTag({ name: "apple-mobile-web-app-status-bar-style", content: "default" });
+  }
+  let themeColor = null;
+  function syncThemeColor() {
+    if (!document.head) return;
+    if (!themeColor) themeColor = document.querySelector('meta[name="theme-color"]') || headTag({ name: "theme-color", content: "" });
+    const bg = getComputedStyle(root).getPropertyValue("--bg").trim();
+    if (bg) themeColor.setAttribute("content", bg);
+  }
+  setupHead();
+
   // ---------- Applying a theme ----------
 
   const listeners = new Set();
@@ -568,6 +606,7 @@
     applied = theme;
     root.dataset.theme = theme;
     cache = null;
+    syncThemeColor();
     if (!prev) return; // first paint: nothing drawn yet
     const next = colors();
     rethemePlots(prev, next);
@@ -662,21 +701,51 @@
 
   // ---------- Top bar: hide on scroll down, show on scroll up ----------
 
+  // The same gesture also minimises the phone tab bar (<html class="nx-bars-min">), as iOS
+  // does: it shrinks to one round button and a .dock moves into its row. Scrolling up,
+  // reaching the end of the page or tapping the button brings it back.
   function autoHideTopbar() {
     const topbar = document.querySelector(".topbar");
-    if (!topbar || root.dataset.nexusTopbar === "static") return;
+    const hideTop = topbar && root.dataset.nexusTopbar !== "static";
     let lastY = window.scrollY, ticking = false;
+    const show = () => {
+      if (hideTop) topbar.classList.remove("nx-hidden");
+      root.classList.remove("nx-bars-min");
+    };
     const update = () => {
       ticking = false;
       const y = window.scrollY, dy = y - lastY;
-      const keep = y < topbar.offsetHeight || topbar.contains(document.activeElement) ||
-        (panel && panel.box.classList.contains("open"));
-      if (keep || dy < -6) topbar.classList.remove("nx-hidden");
-      else if (dy > 6) topbar.classList.add("nx-hidden");
+      const atEnd = y + window.innerHeight >= document.documentElement.scrollHeight - 4;
+      const keep = y < (topbar ? topbar.offsetHeight : 60) || atEnd ||
+        (topbar && topbar.contains(document.activeElement)) ||
+        (panel && panel.box.classList.contains("open")) || root.classList.contains("nx-sheet-open");
+      if (keep || dy < -6) show();
+      else if (dy > 6) {
+        if (hideTop) topbar.classList.add("nx-hidden");
+        root.classList.add("nx-bars-min");
+      }
       if (Math.abs(dy) > 6 || keep) lastY = y;
     };
     window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
-    topbar.addEventListener("focusin", () => topbar.classList.remove("nx-hidden"));
+    if (topbar) topbar.addEventListener("focusin", show);
+    // A tap on the minimised tab bar expands it rather than following the link.
+    document.addEventListener("click", (e) => {
+      if (!root.classList.contains("nx-bars-min") || !e.target.closest(".nx-tabbar")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      show();
+    }, true);
+  }
+
+  // Home-screen app: no pinch or double-tap zoom on the page, as in a native app. In the
+  // browser zoom stays available. Charts and wide tables still scroll sideways inside.
+  function lockZoomInApp() {
+    const standalone = navigator.standalone === true ||
+      (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+    if (!standalone) return;
+    root.classList.add("nx-standalone");
+    const stop = (e) => e.preventDefault();
+    ["gesturestart", "gesturechange"].forEach((t) => document.addEventListener(t, stop, { passive: false }));
   }
 
   // On phones the nav is one swipeable row: start it with the current page in view.
@@ -699,11 +768,464 @@
     });
   }
 
+  // ---------- App shell: tab bar and "More" sheet from the site's web manifest ----------
+  //
+  // A site opts in with a manifest.webmanifest next to its home page (found through
+  // <link rel="manifest"> or the .brand link). Its "shortcuts" become a bottom tab bar on
+  // phones: up to five tabs, or four plus "More" when there are more, like an iOS app.
+  // Extra members on each shortcut: nexus_icon (a name from TAB_ICONS), nexus_match
+  // (path prefixes, relative to the manifest, that select the tab; default its url) and
+  // nexus_group (section heading in the More sheet).
+
+  const svg = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const TAB_ICONS = {
+    home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/>',
+    chart: '<path d="M3 3v17a1 1 0 0 0 1 1h17"/><path d="m7 15 4-5 3 3 6-7"/>',
+    bars: '<path d="M3 3v17a1 1 0 0 0 1 1h17"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="12" y="6" width="3" height="11" rx="1"/><rect x="17" y="9" width="3" height="8" rx="1"/>',
+    target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/>',
+    layers: '<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/>',
+    pie: '<path d="M21 12A9 9 0 1 1 12 3v9h9Z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15V3.5Z"/>',
+    gauge: '<path d="M4.5 18a9 9 0 1 1 15 0"/><path d="m12 13 4-4"/><circle cx="12" cy="13" r="1.2"/>',
+    book: '<path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5v-15Z"/><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20v-3"/>',
+    doc: '<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8l-5-5Z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+    calculator: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/>',
+    wallet: '<path d="M19 7V5a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2V6"/><path d="M17 14h.01"/>',
+    more: '<circle cx="12" cy="12" r="9"/><path d="M8 12h.01M12 12h.01M16 12h.01"/>',
+    link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  };
+  const tabIcon = (name) => svg(TAB_ICONS[name] || TAB_ICONS.link);
+  const CHEVRON = '<svg class="nx-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
+  const APP_KEY = "nexus-app:";
+
+  function manifestUrl() {
+    const link = document.querySelector('link[rel="manifest"]');
+    if (link) return link.href;
+    const brand = document.querySelector(".topbar a.brand[href]");
+    return brand ? new URL("manifest.webmanifest", brand.href).href : null;
+  }
+
+  // Path of this page relative to the manifest's folder, e.g. "fairvalue/index.html".
+  function sitePath(base) {
+    const dir = new URL(".", base).pathname, here = location.pathname;
+    let rel = here.startsWith(dir) ? decodeURIComponent(here.slice(dir.length)) : null;
+    if (rel !== null && (rel === "" || rel.endsWith("/"))) rel += "index.html";
+    return rel;
+  }
+
+  function matches(item, rel, base) {
+    if (rel === null) return false;
+    const prefixes = item.nexus_match || [new URL(item.url, base).pathname.slice(new URL(".", base).pathname.length)];
+    return prefixes.some((p) => rel.startsWith(p));
+  }
+
+  let shell = null;
+  function buildShell(man, base) {
+    if (shell) { shell.remove(); shell = null; }
+    const items = (man.shortcuts || []).filter((s) => s && s.url && s.name);
+    if (items.length < 2) { root.classList.remove("nx-has-tabs"); return; }
+    const overflow = items.length > 5;
+    const tabs = overflow ? items.slice(0, 4) : items;
+    const rest = overflow ? items.slice(4) : [];
+    const rel = sitePath(base);
+    let active = tabs.findIndex((t) => matches(t, rel, base));
+    const moreActive = active < 0 && rest.some((t) => matches(t, rel, base));
+    const href = (s) => esc(new URL(s.url, base).href);
+
+    const bar = document.createElement("nav");
+    bar.className = "nx-tabbar";
+    bar.setAttribute("aria-label", man.short_name || man.name || "Sections");
+    bar.innerHTML = tabs.map((t, i) =>
+      `<a href="${href(t)}"${i === active ? ' class="active" aria-current="page"' : ""}>` +
+      `${tabIcon(t.nexus_icon)}<span>${esc(t.short_name || t.name)}</span></a>`).join("") +
+      (overflow ? `<button type="button" class="nx-more-btn${moreActive ? " active" : ""}" aria-haspopup="dialog" aria-controls="nx-more" aria-expanded="false">${tabIcon("more")}<span>More</span></button>` : "");
+    const nodes = [bar];
+
+    if (overflow) {
+      const groups = [];
+      for (const s of rest) {
+        const g = s.nexus_group || "";
+        let grp = groups.find((x) => x.name === g);
+        if (!grp) groups.push(grp = { name: g, items: [] });
+        grp.items.push(s);
+      }
+      const btn = bar.querySelector(".nx-more-btn");
+      const more = createSheet("nx-more", (open) => btn.setAttribute("aria-expanded", String(open)));
+      more.setHead("More");
+      more.body.innerHTML = groups.map((g) =>
+        (g.name ? `<h3 class="nx-list-head">${esc(g.name)}</h3>` : "") +
+        '<ul class="nx-list">' + g.items.map((s) =>
+          `<li><a href="${href(s)}"${matches(s, rel, base) ? ' aria-current="page"' : ""}>` +
+          `<span class="nx-list-icon">${tabIcon(s.nexus_icon)}</span>` +
+          `<span class="nx-list-text"><strong>${esc(s.name)}</strong>${s.description ? `<small>${esc(s.description)}</small>` : ""}</span>` +
+          `${CHEVRON}</a></li>`).join("") + "</ul>").join("");
+      btn.addEventListener("click", () => more.open(!more.isOpen()));
+      nodes.push(...more.nodes);
+    }
+
+    document.body.append(...nodes);
+    root.classList.add("nx-has-tabs");
+    shell = { remove: () => nodes.forEach((n) => n.remove()) };
+  }
+
+  // Link the manifest and touch icon on pages that don't, so "Add to Home Screen" works
+  // from any page of the site.
+  function linkManifest(url, man) {
+    if (!document.querySelector('link[rel="manifest"]')) headTag({ rel: "manifest", href: url });
+    if (!document.querySelector('link[rel="apple-touch-icon"]')) {
+      const icon = (man.icons || []).find((i) => /180/.test(i.sizes || "")) ||
+        (man.icons || []).find((i) => !/maskable/.test(i.purpose || ""));
+      if (icon) headTag({ rel: "apple-touch-icon", href: new URL(icon.src, url).href });
+    }
+    if (!document.querySelector('meta[name="apple-mobile-web-app-title"]') && (man.short_name || man.name))
+      headTag({ name: "apple-mobile-web-app-title", content: man.short_name || man.name });
+  }
+
+  // Draw at once from the copy kept from an earlier page (no flash of the old top nav),
+  // then refresh it from the network.
+  function setupAppShell() {
+    if (root.dataset.nexusTabs === "off") return;
+    const url = manifestUrl();
+    if (!url) return;
+    let cached = null;
+    try { cached = localStorage.getItem(APP_KEY + url); } catch (e) { /* no storage */ }
+    if (cached) {
+      try { const man = JSON.parse(cached); linkManifest(url, man); buildShell(man, url); } catch (e) { cached = null; }
+    }
+    fetch(url, { cache: "no-cache" })
+      .then((r) => (r.ok ? r.text() : Promise.reject(r.status)))
+      .then((text) => {
+        const man = JSON.parse(text);
+        try { localStorage.setItem(APP_KEY + url, text); } catch (e) { /* no storage */ }
+        if (text !== cached) { linkManifest(url, man); buildShell(man, url); }
+      })
+      .catch((status) => {
+        // No manifest (an HTTP error, not being offline): not an app-shell site.
+        // Forget any old copy and keep the top nav.
+        if (typeof status !== "number") return;
+        try { localStorage.removeItem(APP_KEY + url); } catch (e) { /* no storage */ }
+        if (cached && shell) { shell.remove(); shell = null; root.classList.remove("nx-has-tabs"); }
+      });
+  }
+
+  // ---------- Bottom sheet (phones) ----------
+  //
+  // A panel that slides up from the bottom: grabber, title (+ optional subtitle), Done,
+  // and a scrolling body. Dismissed by Done, the backdrop, Escape or dragging it down.
+  // Returns { nodes, body, setHead(title, subtitle), open(yes), isOpen() }; the caller
+  // appends `nodes` to the page.
+  let sheetSeq = 0;
+  function createSheet(id, onToggle) {
+    const titleId = `${id}-title-${++sheetSeq}`;
+    const backdrop = document.createElement("div");
+    backdrop.className = "nx-sheet-backdrop";
+    const sheet = document.createElement("div");
+    sheet.id = id;
+    sheet.className = "nx-sheet";
+    sheet.setAttribute("role", "dialog");
+    sheet.setAttribute("aria-modal", "true");
+    sheet.setAttribute("aria-labelledby", titleId);
+    sheet.tabIndex = -1;
+    sheet.innerHTML =
+      '<div class="nx-sheet-grabber" aria-hidden="true"></div>' +
+      `<div class="nx-sheet-head"><div class="nx-sheet-titles"><h2 id="${titleId}"></h2><small hidden></small></div>` +
+      '<button type="button" class="nx-sheet-done">Done</button></div>' +
+      '<div class="nx-sheet-body"></div>';
+    const body = sheet.querySelector(".nx-sheet-body");
+    const done = sheet.querySelector(".nx-sheet-done");
+    let opener = null;
+    const isOpen = () => sheet.classList.contains("open");
+    const open = (yes) => {
+      if (yes === isOpen()) return;
+      sheet.style.transform = "";
+      sheet.classList.toggle("open", yes);
+      backdrop.classList.toggle("open", yes);
+      root.classList.toggle("nx-sheet-open", yes);
+      if (onToggle) onToggle(yes);
+      if (yes) {
+        opener = document.activeElement;
+        body.scrollTop = 0;
+        // Focus the dialog itself (screen readers start at its title) without ringing a button.
+        sheet.focus({ preventScroll: true });
+      } else if (opener && opener.focus) opener.focus({ preventScroll: true });
+    };
+    backdrop.addEventListener("click", () => open(false));
+    done.addEventListener("click", () => open(false));
+    sheet.addEventListener("keydown", (e) => { if (e.key === "Escape") open(false); });
+    // Drag the sheet down by its header to dismiss it, as in iOS.
+    let startY = null, dy = 0;
+    [sheet.querySelector(".nx-sheet-grabber"), sheet.querySelector(".nx-sheet-head")].forEach((h) => {
+      h.addEventListener("touchstart", (e) => { startY = e.touches[0].clientY; dy = 0; sheet.classList.add("dragging"); }, { passive: true });
+      h.addEventListener("touchmove", (e) => {
+        if (startY === null) return;
+        dy = Math.max(0, e.touches[0].clientY - startY);
+        sheet.style.transform = `translateY(${dy}px)`;
+      }, { passive: true });
+      h.addEventListener("touchend", () => {
+        sheet.classList.remove("dragging");
+        startY = null;
+        if (dy > 80) open(false); else sheet.style.transform = "";
+      });
+    });
+    const setHead = (title, subtitle) => {
+      sheet.querySelector("h2").textContent = title;
+      const small = sheet.querySelector(".nx-sheet-titles small");
+      small.textContent = subtitle || "";
+      small.hidden = !subtitle;
+    };
+    return { nodes: [backdrop, sheet], body, setHead, open, isOpen };
+  }
+
+  // ---------- List tables: tables become iOS-style lists on phones ----------
+  //
+  // <table class="data" data-list> opts in. Header cells name the roles of their columns:
+  //   <th data-list="title">     first line, left (default: the first column)
+  //   <th data-list="subtitle">  second line, left
+  //   <th data-list="value">     first line, right: the number that matters for this table
+  //   <th data-list="note" data-list-prefix="Solvency">  second line, right
+  //   data-list-prefix="…" / data-list-suffix="…" on any of them adds text around the
+  //   cell in the row (e.g. note "Solvency 77", subtitle "22 stocks").
+  // On phones the header hides and every row shows just those cells with a chevron; a
+  // tap opens a sheet with every column (and an "Open" button when the row has a link).
+  // On the <table>:
+  //   data-list-tap="native"   the row keeps the page's own tap (select, navigate); no sheet
+  //   data-list-action="Zoom"  the sheet's button performs the row's own tap
+  // A <tr data-list-detail> right after a row (e.g. an expandable detail row) is hidden
+  // in the list and shown inside that row's sheet.
+  // Long tables (12+ rows) also get a Sort menu. Columns whose <th> is .sortable are
+  // sorted by the page (the menu clicks that header and reads aria-sort back); others
+  // are sorted here, by <td data-sort> when present, else by the cell's number or text.
+  // <th data-sort-dir="asc"> starts that column ascending (default: numbers descending,
+  // text ascending). Rows the page re-renders or filters are picked up automatically.
+  //
+  // <table data-list="cards"> is for reference and comparison tables (text to read, not
+  // rows to open): on phones each row becomes a card, the title column as its heading
+  // and every other cell under its column's label. Short values sit side by side; long
+  // text takes the full width.
+
+  const PHONE_QUERY = "(max-width: 640px), (pointer: coarse) and (max-height: 500px)";
+  const phone = () => !!window.matchMedia && matchMedia(PHONE_QUERY).matches;
+  const ROLE_CLASS = { title: "nx-c-title", subtitle: "nx-c-sub", value: "nx-c-value", note: "nx-c-note" };
+  const ROLE_CLASSES = Object.values(ROLE_CLASS);
+  const headCells = (t) => [...((t.tHead && t.tHead.rows[0] && t.tHead.rows[0].cells) || [])];
+  const headLabel = (th) => (th.dataset.listLabel || th.textContent).replace(/[↑↓▲▼]/g, "").trim();
+  const listed = new WeakSet();
+  let detail = null;
+
+  function roles(t) {
+    const r = headCells(t).map((th) => (th.dataset.list || "").trim());
+    if (r.length && !r.includes("title")) r[0] = r[0] || "title";
+    return r;
+  }
+
+  const isCards = (t) => t.dataset.list === "cards";
+  const setData = (el, key, v) => { if (v) el.dataset[key] = v; else delete el.dataset[key]; };
+
+  function markList(t) {
+    const ths = headCells(t), rs = roles(t), cards = isCards(t);
+    t.classList.add(cards ? "nx-tcards" : "nx-tlist");
+    t.classList.toggle("nx-tlist-sub", !cards && rs.includes("subtitle"));
+    t.classList.toggle("nx-tlist-note", !cards && rs.includes("note"));
+    const labels = ths.map(headLabel);
+    // A row that already shows every column and leads nowhere has nothing to open: no chevron, no tap.
+    const hidden = rs.some((r, i) => !ROLE_CLASS[r] && labels[i]);
+    const leads = t.dataset.listAction || t.dataset.listTap === "native" || [...t.tBodies].some((b) => b.querySelector("a[href]"));
+    t.classList.toggle("nx-tlist-static", !cards && !hidden && !leads);
+    // Cards: a column with any long text spans the card in every row, so cards line up.
+    const wide = cards ? ths.map((_, i) => [...t.tBodies].some((b) => [...b.rows].some((tr) => {
+      const td = tr.hasAttribute("data-list-detail") ? null : tr.cells[i];
+      return td && (td.textContent.trim().length > 26 || !!td.querySelector("table, ul, ol, p"));
+    }))) : [];
+    for (const body of t.tBodies) for (const tr of body.rows) {
+      if (tr.hasAttribute("data-list-detail")) continue;
+      [...tr.cells].forEach((td, i) => {
+        td.classList.remove(...ROLE_CLASSES, "nx-c-wide");
+        const cls = ROLE_CLASS[rs[i]];
+        if (cls) td.classList.add(cls);
+        if (cards) {
+          // Cards: every non-title cell carries its column label; long text spans the card.
+          setData(td, "nxLabel", rs[i] === "title" ? "" : labels[i]);
+          if (rs[i] !== "title" && wide[i]) td.classList.add("nx-c-wide");
+        } else {
+          setData(td, "nxPrefix", ROLE_CLASS[rs[i]] && ths[i] && ths[i].dataset.listPrefix);
+          setData(td, "nxSuffix", ROLE_CLASS[rs[i]] && ths[i] && ths[i].dataset.listSuffix);
+        }
+      });
+    }
+    syncSort(t);
+  }
+
+  // ----- Row detail sheet -----
+  function openDetail(t, tr) {
+    if (!detail) {
+      detail = createSheet("nx-detail");
+      document.body.append(...detail.nodes);
+    }
+    const ths = headCells(t), rs = roles(t), cells = [...tr.cells];
+    // A cell's text as the row shows it, with its column's prefix and suffix ("Trade 1").
+    const text = (i) => {
+      const v = i >= 0 && cells[i] ? cells[i].textContent.trim() : "";
+      if (!v || !ths[i]) return v;
+      return [ths[i].dataset.listPrefix, v, ths[i].dataset.listSuffix].filter(Boolean).join(" ");
+    };
+    detail.setHead(text(rs.indexOf("title")) || "Details", text(rs.indexOf("subtitle")));
+    const rows = cells.map((td, i) => {
+      if (rs[i] === "title" || rs[i] === "subtitle" || !ths[i]) return "";
+      const label = headLabel(ths[i]);
+      const value = td.innerHTML.trim();
+      if (!label) return ""; // unlabelled columns are controls (an expand caret) or decoration
+      return `<li><div class="nx-kv"><span>${esc(label)}</span><b>${value || "–"}</b></div></li>`;
+    }).join("");
+    // Detail rows that follow this row (e.g. a trade's legs) go under the values.
+    let extra = "";
+    for (let n = tr.nextElementSibling; n && n.hasAttribute("data-list-detail"); n = n.nextElementSibling)
+      extra += [...n.cells].map((c) => c.innerHTML).join("");
+    const action = t.dataset.listAction;
+    const link = !action && tr.querySelector("a[href]");
+    detail.body.innerHTML = (rows ? `<ul class="nx-list nx-kv-list">${rows}</ul>` : "") +
+      (extra ? `<div class="nx-sheet-extra">${extra}</div>` : "") +
+      (action ? `<button type="button" class="btn primary nx-sheet-action">${esc(action)}${CHEVRON}</button>` : "") +
+      (link ? `<a class="btn primary nx-sheet-action" href="${esc(link.href)}"${link.target ? ` target="${esc(link.target)}" rel="noopener"` : ""}>` +
+        `Open ${esc(text(rs.indexOf("title")) || "page")}${CHEVRON}</a>` : "");
+    if (action) detail.body.querySelector(".nx-sheet-action").addEventListener("click", () => {
+      detail.open(false);
+      tr.__nxPass = true; // let this click through to the page's own row handler
+      tr.click();
+    });
+    detail.open(true);
+  }
+
+  // ----- Sorting -----
+  // A cell's sort key: its data-sort, else (in a .num column) the first number in its
+  // text, else its text. Empty cells and dashes give null and always sort last.
+  function cellKey(td, numeric) {
+    if (!td) return null;
+    const own = td.dataset.sort !== undefined;
+    const raw = own ? td.dataset.sort : td.textContent.trim();
+    if (raw === "" || /^[–—-]$|^n\/a/i.test(raw)) return null;
+    if (!own && !numeric) return raw.toLowerCase();
+    const n = raw.replace(/[,\s ]/g, "").replace(/[−–]/g, "-").match(/-?\d+(\.\d+)?/);
+    return n ? parseFloat(n[0]) : raw.toLowerCase();
+  }
+  const defaultDir = (th) => (th.dataset.sortDir === "asc" ? 1 : th.dataset.sortDir === "desc" ? -1 : th.classList.contains("num") ? -1 : 1);
+
+  function sortHere(t, i, dir) {
+    const body = t.tBodies[0];
+    if (!body) return;
+    const th = headCells(t)[i], numeric = !!th && th.classList.contains("num");
+    const rows = [...body.rows].map((tr, k) => ({ tr, k, v: cellKey(tr.cells[i], numeric) }));
+    rows.sort((a, b) => {
+      if (a.v === null || b.v === null) return a.v === null ? (b.v === null ? a.k - b.k : 1) : -1;
+      if (typeof a.v === "number" && typeof b.v === "number") return (a.v - b.v) * dir || a.k - b.k;
+      return String(a.v).localeCompare(String(b.v)) * dir || a.k - b.k;
+    });
+    t.__nxSort = { i, dir };
+    headCells(t).forEach((th, j) => (j === i ? th.setAttribute("aria-sort", dir > 0 ? "ascending" : "descending") : th.removeAttribute("aria-sort")));
+    body.append(...rows.map((r) => r.tr));
+  }
+
+  function currentSort(t) {
+    const ths = headCells(t);
+    const i = ths.findIndex((th) => th.hasAttribute("aria-sort") && th.getAttribute("aria-sort") !== "none");
+    if (i >= 0) return { i, dir: ths[i].getAttribute("aria-sort") === "ascending" ? 1 : -1 };
+    return t.__nxSort || null;
+  }
+
+  function buildSortTools(t) {
+    if (t.__nxTools || t.dataset.listSort === "off") return;
+    const rowCount = t.tBodies[0] ? t.tBodies[0].rows.length : 0;
+    if (rowCount < 12 && t.dataset.listSort !== "on") return;
+    const tools = document.createElement("div");
+    tools.className = "nx-list-tools";
+    tools.innerHTML = '<label class="nx-sort"><span>Sort</span><select aria-label="Sort by"></select></label>' +
+      '<button type="button" class="nx-sort-dir" aria-label="Reverse order"></button>';
+    (t.closest(".table-wrap") || t).before(tools);
+    const select = tools.querySelector("select"), dirBtn = tools.querySelector(".nx-sort-dir");
+    select.addEventListener("change", () => {
+      const i = +select.value, th = headCells(t)[i];
+      if (!th) return;
+      if (th.classList.contains("sortable")) th.click();
+      else sortHere(t, i, defaultDir(th));
+      syncSort(t);
+    });
+    dirBtn.addEventListener("click", () => {
+      const cur = currentSort(t);
+      if (!cur) return;
+      const th = headCells(t)[cur.i];
+      if (th && th.classList.contains("sortable")) th.click();
+      else sortHere(t, cur.i, -cur.dir);
+      syncSort(t);
+    });
+    t.__nxTools = { select, dirBtn };
+  }
+
+  function syncSort(t) {
+    const tools = t.__nxTools;
+    if (!tools) return;
+    const ths = headCells(t), cur = currentSort(t);
+    const opts = ths.map((th, i) => (headLabel(th) ? `<option value="${i}">${esc(headLabel(th))}</option>` : "")).join("");
+    const key = (cur ? "1" : "0") + opts;
+    if (tools.select.dataset.opts !== key) {
+      tools.select.innerHTML = (cur ? "" : '<option value="" disabled>Default order</option>') + opts;
+      tools.select.dataset.opts = key;
+    }
+    tools.select.value = cur ? String(cur.i) : "";
+    tools.dirBtn.disabled = !cur;
+    tools.dirBtn.textContent = cur && cur.dir > 0 ? "↑" : "↓";
+    tools.dirBtn.setAttribute("aria-label", cur && cur.dir > 0 ? "Ascending; tap to reverse" : "Descending; tap to reverse");
+  }
+
+  function initList(t) {
+    if (listed.has(t)) return;
+    listed.add(t);
+    if (!isCards(t)) buildSortTools(t);
+    markList(t);
+    // On phones a tap anywhere on a row opens its details instead of following a link.
+    t.addEventListener("click", (e) => {
+      if (!phone() || !t.classList.contains("nx-tlist") || t.classList.contains("nx-tlist-static") || t.dataset.listTap === "native") return;
+      const tr = e.target.closest("tr");
+      if (!tr || !tr.parentElement || tr.parentElement.parentElement !== t || tr.parentElement.tagName !== "TBODY") return;
+      if (tr.__nxPass) { tr.__nxPass = false; return; }
+      if (tr.hasAttribute("data-list-detail") || e.target.closest("button, input, select, textarea, label")) return;
+      e.preventDefault();
+      openDetail(t, tr);
+    });
+  }
+
+  function setupListTables() {
+    document.querySelectorAll("table[data-list]").forEach(initList);
+    if (!("MutationObserver" in window)) return;
+    const dirty = new Set();
+    let queued = false;
+    new MutationObserver((records) => {
+      for (const m of records) {
+        const t = m.target.closest ? m.target.closest("table[data-list]") : null;
+        if (t) dirty.add(t);
+        for (const n of m.addedNodes) {
+          if (n.nodeType !== 1) continue;
+          if (n.matches("table[data-list]")) dirty.add(n);
+          else if (n.querySelector) n.querySelectorAll("table[data-list]").forEach((x) => dirty.add(x));
+        }
+      }
+      if (!dirty.size || queued) return;
+      queued = true;
+      queueMicrotask(() => {
+        queued = false;
+        for (const t of dirty) { if (!listed.has(t)) initList(t); else markList(t); }
+        dirty.clear();
+      });
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
   function init() {
     buildPanel();
     autoHideTopbar();
     revealActiveNav();
     setupDocks();
+    setupAppShell();
+    syncThemeColor();
+    lockZoomInApp();
+    setupListTables();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
