@@ -30,6 +30,10 @@
  *                                 (Plotly.newPlot / Plotly.react already do this)
  *   Nexus.bands(list)             shaded x-ranges with labels (eras, regimes) -> { shapes, annotations }
  *   Nexus.events(list)            dated vertical marker lines with labels -> { shapes, annotations }
+ *   Nexus.tips                    { key: html } registry for info bubbles: <button class="info" data-tip="key">i</button>
+ *                                 (or data-tip-html="..."). One tooltip for the whole page: hover, focus, tap, Esc.
+ *   Nexus.maximize(panel, on?)    take a .chart-panel to the whole screen (browser full screen, else the window);
+ *                                 returns the new state. <button data-nexus-maximize> inside a panel does it with no code.
  *   Nexus.rgba(color, alpha)      "#rrggbb" or "rgb(...)" -> "rgba(...)"
  *   Nexus.merge(base, extra)      deep merge of plain objects
  *
@@ -1217,6 +1221,85 @@
     }).observe(document.body, { childList: true, subtree: true });
   }
 
+  // ---------- Info bubbles: one tooltip for every .info[data-tip] button ----------
+  const TIPS = {};
+  function setupTips() {
+    let tip = null, owner = null;
+    const hide = () => { if (tip) tip.hidden = true; if (owner) owner.setAttribute("aria-expanded", "false"); owner = null; };
+    const place = (b) => {
+      const r = b.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
+      if (r.bottom < 0 || r.top > vh || !b.isConnected) return hide();     // scrolled away or redrawn
+      let x = r.right + 10, y = r.top - 6;                                  // right of the bubble
+      if (x + w > vw - 8) x = r.left - w - 10;                              // else left of it
+      if (x < 8) { x = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), vw - w - 8); y = r.bottom + 8; }  // else below
+      tip.style.left = x + "px"; tip.style.top = Math.min(Math.max(8, y), vh - h - 8) + "px";
+    };
+    const show = (b) => {
+      const html = b.dataset.tipHtml || TIPS[b.dataset.tip];
+      if (!html) return;
+      if (!tip) { tip = document.createElement("div"); tip.className = "tip"; tip.setAttribute("role", "tooltip"); tip.hidden = true; document.body.appendChild(tip); }
+      if (owner && owner !== b) owner.setAttribute("aria-expanded", "false");
+      owner = b; b.setAttribute("aria-expanded", "true");
+      tip.innerHTML = html; tip.hidden = false; place(b);
+    };
+    const infoOf = (e) => e.target.closest && e.target.closest(".info");
+    document.addEventListener("mouseover", (e) => { const b = infoOf(e); if (b) show(b); });
+    document.addEventListener("mouseout", (e) => { const b = infoOf(e); if (b && b === owner && !b.contains(e.relatedTarget)) hide(); });
+    document.addEventListener("focusin", (e) => { const b = infoOf(e); if (b) show(b); });
+    document.addEventListener("focusout", (e) => { if (infoOf(e) === owner) hide(); });
+    // a click or tap only shows the tip (it never opens the row or card the bubble sits in); elsewhere hides it
+    document.addEventListener("click", (e) => { const b = infoOf(e); if (b) { e.preventDefault(); show(b); } else hide(); }, true);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") hide(); });
+    const follow = () => owner && place(owner);
+    window.addEventListener("scroll", follow, { passive: true, capture: true });
+    window.addEventListener("resize", follow);
+  }
+
+  // ---------- Full-screen chart panel ----------
+  // The panel fills the browser's full screen when allowed, else the whole window. Zoom, hover and click handlers
+  // keep working; the charts inside are resized. Esc leaves either way.
+  const isMax = (panel) => panel.classList.contains("maximized");
+  function resizeCharts(panel) {
+    requestAnimationFrame(() => {
+      if (window.Plotly) panel.querySelectorAll(".chart").forEach((g) => { if (g._fullLayout) window.Plotly.Plots.resize(g); });
+    });
+  }
+  function maximize(panel, on) {
+    panel = el(panel);
+    const next = on === undefined ? !isMax(panel) : !!on;
+    if (next === isMax(panel)) return next;
+    panel.classList.toggle("maximized", next);
+    document.body.classList.toggle("chart-maximized", next);
+    panel.querySelectorAll("[data-nexus-maximize]").forEach((b) => {
+      if (b.dataset.nexusLabel === undefined) b.dataset.nexusLabel = b.textContent;
+      b.setAttribute("aria-pressed", String(next));
+      b.textContent = next ? (b.dataset.nexusMaxOn || "\u2715 Exit full screen") : b.dataset.nexusLabel;
+    });
+    if (next && panel.requestFullscreen) panel.requestFullscreen().catch(() => {});  // refused: it still fills the window
+    else if (!next && document.fullscreenElement === panel) document.exitFullscreen();
+    resizeCharts(panel);
+    return next;
+  }
+  function setupMaximize() {
+    document.addEventListener("click", (e) => {
+      const b = e.target.closest && e.target.closest("[data-nexus-maximize]");
+      if (!b) return;
+      const sel = b.dataset.nexusMaximize;
+      const panel = (sel && document.querySelector(sel)) || b.closest(".chart-panel");
+      if (panel) maximize(panel);
+    });
+    document.addEventListener("fullscreenchange", () => {
+      document.querySelectorAll(".chart-panel.maximized").forEach((p) => {
+        if (!document.fullscreenElement) maximize(p, false);     // Esc in browser full screen
+        else resizeCharts(p);
+      });
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape" || document.fullscreenElement) return;
+      document.querySelectorAll(".chart-panel.maximized").forEach((p) => maximize(p, false));
+    });
+  }
+
   function init() {
     buildPanel();
     autoHideTopbar();
@@ -1226,6 +1309,8 @@
     syncThemeColor();
     lockZoomInApp();
     setupListTables();
+    setupTips();
+    setupMaximize();
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
@@ -1245,6 +1330,8 @@
     styleChart,
     bands: (list) => marks(list, "band"),
     events: (list) => marks(list, "event"),
+    tips: TIPS,
+    maximize,
     rgba,
     merge,
   };

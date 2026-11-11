@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trade Lab · Nexus example</title>
+  <meta name="description" content="Example: a backtest workbench. Settings sidebar, KPI tiles, a full-screen ratio chart with a swing meter, equity and drawdown.">
+  <!-- Relative links so the example previews local edits; a real page links the hosted files (see template.html). -->
+  <link rel="stylesheet" href="../nexus.css">
+  <script src="../nexus.js"></script>
+  <link rel="icon" href="../favicon.svg">
+  <style>
+    /* page-specific layout only: every colour, control and component comes from nexus.css */
+    #c-ratio { cursor: crosshair; }
+    .page-head { display: flex; flex-wrap: wrap; gap: 14px 24px; justify-content: space-between; align-items: flex-end; }
+  </style>
+</head>
+<body class="wide">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="../index.html"><span class="brand-mark">N</span>Nexus Design</a>
+      <nav class="nav">
+        <a href="../index.html">Gallery</a>
+        <a href="dashboard.html">Example: dashboard</a>
+        <a href="trade-lab.html" class="active">Example: Trade Lab</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">Example · illustrative data</div>
+        <h1>Trade <span class="gradient-text">Lab</span></h1>
+        <p class="lead">Backtest buying and selling a <mark>basket ratio</mark>. Choose how the rules are tested on the left and everything
+          below is recomputed at once. The series is <span class="hl-accent">synthetic</span>: a seeded mean-reverting ratio whose range breaks after the scan.</p>
+      </div>
+    </div>
+
+    <div class="panel anatomy" id="anatomy">
+      <div class="side num"><span class="leg-label num">Numerator · 3 stocks</span>
+        <span class="chips"><span class="chip num">ALFA</span><span class="chip num">BRVO</span><span class="chip num">CHRL</span></span>
+        <span class="hint">Alfa Works, Bravo Systems, Charlie Labs</span></div>
+      <div class="div">÷</div>
+      <div class="side den"><span class="leg-label den">Denominator · 3 stocks</span>
+        <span class="chips"><span class="chip den">DLTA</span><span class="chip den">ECHO</span><span class="chip den">FXTR</span></span>
+        <span class="hint">Delta Grid, Echo Power, Foxtrot Energy</span></div>
+    </div>
+
+    <div class="lab">
+      <aside class="panel lab-side" aria-label="Strategy">
+        <div class="group">
+          <h4><span>Backtest</span></h4>
+          <label class="field wide"><select class="input" id="bt">
+            <option value="episode">After the scan: the next swings</option>
+            <option value="history">Whole history</option></select></label>
+          <div id="ep_fields">
+            <label class="field"><span>Horizon (years)</span><input class="input" type="number" id="ep_years" min="0.25" max="1.17" step="0.25" value="1"></label>
+            <label class="field"><span>Max trades
+              <button type="button" class="info" data-tip="ep_trades" aria-label="About max trades">i</button></span>
+              <input class="input" type="number" id="ep_trades" min="1" max="10" step="1" value="1"></label>
+            <label class="field"><span>Enter</span><select class="input" id="ep_entry">
+              <option value="start">only if outside the band at the scan end</option><option value="any">at any band edge</option></select></label>
+            <label class="field"><span>Range-break stop
+              <button type="button" class="info" data-tip="ep_break" aria-label="About the range-break stop">i</button></span><select class="input" id="ep_break">
+              <option value="0">off</option><option value="1">past the window's high / low</option></select></label>
+          </div>
+          <div class="muted small" id="ep_note"></div>
+        </div>
+        <div class="group">
+          <h4><span>Band</span></h4>
+          <label class="field"><span>Band percentile
+            <button type="button" class="info" data-tip="band_pct" aria-label="About the band">i</button></span>
+            <input class="input" type="number" id="band_pct" min="1" max="40" step="1" value="10"></label>
+          <label class="field"><span>Starting capital ($)</span><input class="input" type="number" id="capital" min="100" step="1000" value="10000"></label>
+        </div>
+        <div class="group">
+          <h4><span>Themes</span></h4>
+          <div class="muted small">Switch the theme with the panel at the bottom right: the chart restyles with it.</div>
+        </div>
+      </aside>
+
+      <section style="min-width:0">
+        <div class="kpis tight" id="kpis"></div>
+
+        <div class="panel chart-panel" id="ratio_panel">
+          <div class="chart-head"><h3>Ratio, rules and trades</h3>
+            <div class="legend"><span><i class="ln sw-accent"></i>ratio</span><span><i class="band sw-neutral"></i>band</span>
+              <span><i class="sw-under"></i>enter: numerator up</span><span><i class="sw-series-2"></i>enter: denominator up</span><span><i class="sw-neutral"></i>exit</span></div>
+            <div class="tools"><button type="button" class="btn sm" aria-pressed="false" data-nexus-maximize
+              title="Fill the screen with this chart (Esc to leave). Zoom and the swing meter keep working.">⛶ Full screen</button></div></div>
+          <div class="meter" id="meter"><span id="meter_text"></span><button type="button" class="btn sm" id="meter_clear" hidden>Clear</button></div>
+          <div id="c-ratio" class="chart h-lg"></div>
+        </div>
+
+        <div class="two-col">
+          <div class="panel chart-panel">
+            <div class="chart-head"><h3>Portfolio value</h3>
+              <div class="legend"><span><i class="ln sw-accent"></i>strategy</span><span><i class="ln sw-neutral"></i>hold the pair</span></div></div>
+            <div id="c-equity" class="chart h-md"></div>
+          </div>
+          <div class="panel chart-panel">
+            <div class="chart-head"><h3>Drawdown</h3>
+              <div class="legend"><span><i class="sw-over"></i>strategy</span><span><i class="ln sw-neutral"></i>hold the pair</span></div></div>
+            <div id="c-dd" class="chart h-md"></div>
+          </div>
+        </div>
+
+        <h2 class="section">Trades</h2>
+        <div class="table-wrap"><table class="data" data-list id="trades"></table></div>
+        <p class="muted small" style="margin-top:12px" id="caveat"></p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">Example page of the Nexus design system. The data is synthetic and illustrative. Not investment advice.
+      · <a href="https://github.com/doruirimescu/nexus-design/blob/main/DESIGN.md#example-a-research-workbench">How it is built</a></div>
+  </footer>
+
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+  <script src="lab-demo.js"></script>
+  <script>
+    const { PPY, fmt } = LabDemo, $ = (id) => document.getElementById(id);
+
+    // info bubbles: register the text, put <button class="info" data-tip="key"> next to the setting
+    Object.assign(Nexus.tips, {
+      ep_trades: "<b>Max trades.</b> The episode stops after this many trades: one or two more swings, not trading the range forever.",
+      ep_break: "<b>Range-break stop.</b> Closes the trade, and ends the episode, when the ratio goes past the scan window's own high (if short) or low (if long). The dashed lines on the chart.",
+      band_pct: "<b>Band.</b> Median ± the smaller half of the p10–p90 band of the scan window. A trade enters beyond an edge and exits at the median.",
+    });
+
+    // ---- the synthetic ratio: 10 years, scan ends 300 bars before the data does, the range breaks after it
+    const N = 2520, SCAN = N - 300, HORIZON_MAX = N - 1 - (SCAN - 1);
+    const dates = LabDemo.businessDays(N);
+    const Y = LabDemo.logRatio(2, { n: N, shift: { at: SCAN + 60, by: -0.3, len: 90 } });
+    const R = Array.from(Y, Math.exp);
+    const spanLo = Math.min(...Y.slice(0, SCAN)), spanHi = Math.max(...Y.slice(0, SCAN));
+    let meter = { a: null, b: null };
+
+    function settings() {
+      return { bt: $("bt").value, years: +$("ep_years").value || 1, maxTrades: Math.max(1, Math.round(+$("ep_trades").value || 1)),
+        startOnly: $("ep_entry").value === "start", brk: $("ep_break").value === "1", pct: +$("band_pct").value || 10, capital: +$("capital").value || 10000 };
+    }
+
+    function render() {
+      const o = settings(), C = Nexus.colors, ep = o.bt === "episode";
+      $("ep_fields").hidden = !ep;
+      const s = ep ? SCAN - 1 : 0, e = ep ? Math.min(N - 1, s + Math.round(o.years * PPY)) : N - 1;
+      const b = LabDemo.band(Y, 0, SCAN - 1, o.pct);
+      const bt = LabDemo.backtest(Y, s, e, b, ep
+        ? { maxTrades: o.maxTrades, startOnly: o.startOnly, brk: o.brk ? [spanLo, spanHi] : null, capital: o.capital }
+        : { capital: o.capital });
+      const startTxt = bt.startSig > 0 ? "below the band" : bt.startSig < 0 ? "above the band" : "inside the band";
+      $("ep_note").innerHTML = ep
+        ? `Episode <b>${dates[s]} → ${dates[e]}</b>. At the scan end the ratio was <b>${startTxt}</b>` +
+          `${o.startOnly && !bt.startSig ? ": nothing to trade with “only if outside the band”" : ""}. ` +
+          `${bt.trades.length} trade${bt.trades.length === 1 ? "" : "s"}, ${bt.swings} completed swing${bt.swings === 1 ? "" : "s"}.` : "";
+
+      // KPIs
+      const hold = o.capital * R[e] / R[s];
+      const kpi = (l, v, sub) => `<div class="panel kpi"><div class="label">${l}</div><div class="value sm">${v}</div><div class="sub">${sub}</div></div>`;
+      const wins = bt.trades.filter((t) => t.ret > 0).length;
+      $("kpis").innerHTML = (ep ? kpi("After the scan", `${bt.swings} swing${bt.swings === 1 ? "" : "s"}`,
+          `started ${startTxt} · ${bt.trades.length} of max ${o.maxTrades} trade${o.maxTrades === 1 ? "" : "s"}`) : "") +
+        kpi("Final value", fmt.money(bt.final), `from ${fmt.money(o.capital)} · hold the pair ${fmt.money(hold)}`) +
+        kpi("Return", `<span class="${bt.total >= 0 ? "pos" : "neg"}">${fmt.signed(bt.total)}</span>`, `${dates[s]} → ${dates[e]}`) +
+        kpi("Max drawdown", `<span class="neg">${fmt.pct(bt.mdd)}</span>`, "of the strategy") +
+        kpi("Trades", bt.trades.length, bt.trades.length ? `${wins} of ${bt.trades.length} winners` : "no trade triggered");
+
+      // ratio chart: band, ratio, trades, eras, range-break lines, swing meter
+      const xs = dates.slice(ep ? 0 : s, e + 1), r0 = ep ? 0 : s;
+      const at = (arr) => Array.from(arr.slice(r0, e + 1));
+      const flat = (v) => xs.map(() => Math.exp(v));
+      const line = (y, name, extra) => ({ x: xs, y, mode: "lines", name, hoverinfo: "skip", ...extra });
+      const data = [
+        line(flat(b[0]), "band low", { line: { width: 0, color: C.neutral } }),
+        line(flat(b[1]), "band high", { fill: "tonexty", fillcolor: Nexus.rgba(C.neutral, 0.2), line: { width: 0, color: C.neutral } }),
+        line(flat(b[2]), "median", { line: { width: 1, color: C.neutral, dash: "dot" } }),
+      ];
+      if (ep && o.brk) for (const v of [spanLo, spanHi]) data.push(line(flat(v), "range break", { line: { color: C.negative, width: 1, dash: "dash" } }));
+      const ratioIdx = data.length;
+      data.push({ x: xs, y: at(R), mode: "lines", name: "ratio", line: { color: C.accent, width: 1.6 }, hovertemplate: "%{x}<br>ratio %{y:.4f}<extra></extra>" });
+      const mark = (list, name, symbol, color) => ({ x: list.map((p) => dates[p.t]), y: list.map((p) => R[p.t]), mode: "markers", name,
+        marker: { symbol, size: 12, color, line: { width: 1, color: C.surface } }, text: list.map((p) => p.text), hovertemplate: "%{x}<br>%{text}<extra></extra>" });
+      data.push(mark(bt.trades.filter((t) => t.side > 0).map((t) => ({ t: t.t0, text: "enter: numerator up" })), "enter: numerator up", "triangle-up", C.positive));
+      data.push(mark(bt.trades.filter((t) => t.side < 0).map((t) => ({ t: t.t0, text: "enter: denominator up" })), "enter: denominator up", "triangle-down", C.series2));
+      data.push(mark(bt.trades.map((t) => ({ t: t.t1, text: `exit (${t.reason}): ${fmt.signed(t.ret)}` })), "exit", "x", C.text));
+      if (meter.a != null && (meter.a < r0 || meter.a > e || (meter.b != null && (meter.b < r0 || meter.b > e)))) meter = { a: null, b: null };
+      if (meter.a != null) {
+        const pts = meter.b == null ? [meter.a] : [meter.a, meter.b];
+        data.push({ x: pts.map((t) => dates[t]), y: pts.map((t) => R[t]), mode: "lines+markers+text", name: "swing",
+          line: { color: C.highlight, width: 2, dash: "dot" }, marker: { size: 11, color: C.highlight, line: { width: 2, color: C.surface } },
+          text: pts.map((_, i) => (i === pts.length - 1 && meter.b != null ? fmt.signed(R[meter.b] / R[meter.a] - 1) : "")),
+          textposition: "top center", textfont: { color: C.highlight, size: 14 }, hoverinfo: "skip" });
+      }
+      const eras = [{ x0: dates[Math.max(0, r0)], x1: dates[Math.min(SCAN - 1, e)], label: "band fitted", tone: "accent" }];
+      if (ep) eras.push({ x0: dates[s], x1: dates[e], label: "episode", tone: "positive" });
+      else eras.push({ x0: dates[SCAN], x1: dates[e], label: "after the scan", tone: "neutral" });
+      const bands = Nexus.bands(eras);
+      // uirevision: a zoom survives re-renders (a meter click, a rule change) until the period changes
+      Plotly.react("c-ratio", data, Nexus.plotlyLayout({ hovermode: "closest", showlegend: false, margin: { l: 56, r: 14, t: 10, b: 36 },
+        uirevision: `${dates[r0]}|${dates[e]}|${o.bt}`, yaxis: { type: "log", tickformat: ".3f" },
+        shapes: bands.shapes, annotations: bands.annotations }), Nexus.plotlyConfig).then((gd) => bindMeter(gd, ratioIdx, r0));
+      meterText(false);
+
+      // equity and drawdown
+      const eqXs = dates.slice(s, e + 1), eq = Array.from(bt.eq.slice(s, e + 1)), hd = eqXs.map((_, i) => o.capital * R[s + i] / R[s]);
+      const dd = (v) => { let p = 0; return v.map((x) => { p = Math.max(p, x); return x / p - 1; }); };
+      Plotly.react("c-equity", [
+        { x: eqXs, y: eq, mode: "lines", name: "strategy", line: { color: C.accent, width: 2 }, hovertemplate: "%{x}<br>strategy %{y:$,.0f}<extra></extra>" },
+        { x: eqXs, y: hd, mode: "lines", name: "hold the pair", line: { color: C.neutral, width: 1.4 }, hovertemplate: "%{x}<br>hold %{y:$,.0f}<extra></extra>" },
+      ], Nexus.plotlyLayout({ hovermode: "x unified", showlegend: false, margin: { l: 64, r: 14, t: 10, b: 36 }, yaxis: { tickprefix: "$", tickformat: ",.0f" } }), Nexus.plotlyConfig);
+      Plotly.react("c-dd", [
+        { x: eqXs, y: dd(eq), mode: "lines", name: "strategy", fill: "tozeroy", line: { color: C.negative, width: 1 }, hovertemplate: "%{x}<br>strategy %{y:.1%}<extra></extra>" },
+        { x: eqXs, y: dd(hd), mode: "lines", name: "hold the pair", line: { color: C.neutral, width: 1.2 }, hovertemplate: "%{x}<br>hold %{y:.1%}<extra></extra>" },
+      ], Nexus.plotlyLayout({ hovermode: "x unified", showlegend: false, margin: { l: 56, r: 14, t: 10, b: 36 }, yaxis: { tickformat: ".0%" } }), Nexus.plotlyConfig);
+
+      // trades table
+      $("trades").innerHTML = `<thead><tr><th data-list="title">Entered</th><th data-list="subtitle">Side</th><th class="num" data-list="note">Days</th>` +
+        `<th>Exited</th><th>Reason</th><th class="num" data-list="value">Return</th></tr></thead><tbody>` +
+        (bt.trades.map((t) => `<tr><td>${dates[t.t0]}</td><td><span class="verdict ${t.side > 0 ? "under" : "over"}">${t.side > 0 ? "numerator up" : "denominator up"}</span></td>` +
+          `<td class="num">${t.t1 - t.t0}</td><td>${dates[t.t1]}</td><td>${t.reason}</td>` +
+          `<td class="num"><span class="${t.ret >= 0 ? "pos" : "neg"}">${fmt.signed(t.ret)}</span></td></tr>`).join("") ||
+          `<tr><td colspan="6" class="muted">No trade in this period.</td></tr>`) + "</tbody>";
+      $("caveat").textContent = ep
+        ? "One episode is an anecdote. Pair mode shows the range's own behaviour; a long-only position also carries the market."
+        : "The band is fitted on the same history it is traded on, so this is an in-sample result.";
+    }
+
+    // ---- swing meter: click a point, then another; the line between them shows the move
+    function meterText(live, t) {
+      const a = meter.a, b = meter.b != null ? meter.b : (live ? t : null);
+      $("meter_clear").hidden = a == null;
+      if (a == null) { $("meter_text").innerHTML = "<span class=\"muted\">Click a point on the chart, then another, to measure the swing between them. Zoom first if you like.</span>"; return; }
+      if (b == null) { $("meter_text").innerHTML = `from <b>${dates[a]}</b> at ${R[a].toFixed(4)}: click the end point`; return; }
+      const ch = R[b] / R[a] - 1;
+      $("meter_text").innerHTML = `<b>${dates[a]}</b> → <b>${dates[b]}</b> · ${Math.abs(b - a)} bars · <span class="big ${ch >= 0 ? "pos" : "neg"}">${fmt.signed(ch)}</span>`;
+    }
+    let bound = null;
+    function bindMeter(gd, ratioIdx, r0) {
+      if (bound === gd && gd._lab) { gd._lab.idx = ratioIdx; gd._lab.r0 = r0; return; }
+      bound = gd; gd._lab = { idx: ratioIdx, r0 };
+      const point = (ev) => { const p = ev.points && ev.points.find((q) => q.curveNumber === gd._lab.idx); return p ? gd._lab.r0 + p.pointIndex : null; };
+      gd.on("plotly_click", (ev) => {
+        const t = point(ev); if (t == null) return;
+        meter = meter.a == null || meter.b != null ? { a: t, b: null } : { a: meter.a, b: t };
+        render();
+      });
+      gd.on("plotly_hover", (ev) => { const t = point(ev); if (t != null && meter.a != null && meter.b == null) meterText(true, t); });
+    }
+    $("meter_clear").onclick = () => { meter = { a: null, b: null }; render(); };
+
+    document.querySelectorAll(".lab input, .lab select").forEach((el) => el.addEventListener("input", () => { meter = { a: null, b: null }; render(); }));
+    Nexus.onThemeChange(render);
+    render();
+  </script>
+</body>
+</html>

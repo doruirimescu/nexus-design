@@ -432,6 +432,111 @@ button.timeline-item { cursor: pointer; }
 .range-field output { font-family: var(--mono); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
 .range-field input[type="range"] { grid-column: 1 / -1; width: 100%; margin: 4px 0; accent-color: var(--accent); }
 
+/* ---------- Workbench: settings sidebar + results (dashboards, backtest labs) ----------
+   Taken from Perfect Shapes. Use .container with body.wide: the workbench needs more than 1200px. */
+body.wide .container, body.wide .topbar-inner { max-width: 1680px; }
+.lab { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 18px; align-items: start; margin-top: 22px; }
+.lab-side { position: sticky; top: 76px; max-height: calc(100vh - 96px); overflow-y: auto; padding: 0; }
+.lab-side .group { padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.lab-side .group:last-child { border-bottom: 0; }
+.lab-side .group h4 {
+  margin: 0 0 10px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--faint); display: flex; justify-content: space-between; align-items: center;
+}
+.lab-side .group h4 .muted { text-transform: none; letter-spacing: 0; font-weight: 500; }
+/* compact setting rows: label left, control right; .wide puts the control under the label */
+.lab .field { display: grid; grid-template-columns: minmax(0, 1fr) 128px; gap: 10px; align-items: center; margin: 7px 0; font-size: 13.5px; font-weight: 400; }
+.lab .field > span, .lab .check > span { color: var(--muted); min-width: 0; display: inline-flex; align-items: center; }
+.lab .field > span .info, .lab .check > span .info { margin-left: 6px; }
+.lab .field .input { width: 100%; padding: 5px 8px; font-size: 13px; font-family: var(--mono); }
+.lab .field.wide { grid-template-columns: 1fr; }
+.lab .check { display: flex; gap: 8px; align-items: center; font-size: 13.5px; color: var(--muted); margin: 8px 0; }
+.lab .check input, .toggle-row input { accent-color: var(--accent); }
+.toggle-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.toggle-row .chip { cursor: pointer; user-select: none; }
+.toggle-row .chip.off { opacity: 0.35; }
+.run-panel { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: center; }
+.run-panel .run-buttons { display: flex; gap: 8px; flex: none; }
+.run-panel .run-buttons .btn { min-width: 104px; justify-content: center; }
+.run-panel .run-status { flex: 1 1 320px; min-width: 0; }
+.run-panel .run-line { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13px; }
+.run-panel .progress { height: 8px; border-radius: 4px; }
+.run-panel .progress.paused > div { background: var(--neutral); }
+.empty-state { padding: 48px 16px; text-align: center; color: var(--muted); }
+/* a grid of small chart cards that open a detail page */
+.chart-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 14px; margin-top: 16px; }
+.chart-grid .chart-panel { margin-top: 0; min-width: 0; }
+.chart-grid .chart-head { gap: 10px; }
+.chart-grid .chart-head h3 { font-size: 14px; display: flex; gap: 8px; align-items: center; flex-wrap: nowrap; min-width: 0; flex: 1; }
+.chart-grid .chart-head .verdict { flex: none; }
+.chart-grid .chart-sub { padding: 0 14px; font-size: 12.5px; color: var(--muted); }
+.chart-grid .chart { height: 230px; }
+.openable { cursor: pointer; }
+.chart-panel.openable { transition: border-color 0.15s; }
+.chart-panel.openable:hover { border-color: var(--accent); }
+table.data tr.openable:hover td { background: var(--accent-soft); }
+.legend-toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.legend-toggle input { margin: 0; accent-color: var(--accent); }
+@media (max-width: 900px) { .lab { grid-template-columns: 1fr; } .lab-side { position: static; max-height: none; } }
+@media (max-width: 640px) { .chart-grid { grid-template-columns: 1fr; } .lab .field { grid-template-columns: 1fr 120px; } }
+
+/* ---------- Info bubbles: an (i) button next to a setting; one tooltip pinned to the viewport ----------
+   <button type="button" class="info" data-tip="key" aria-label="About this">i</button>, with the text registered in
+   Nexus.tips (or inline in data-tip-html). nexus.js shows the tooltip on hover, focus and tap. */
+.info {
+  display: inline-grid; place-items: center; width: 16px; height: 16px; margin-left: 6px; padding: 0;
+  border-radius: 50%; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--muted);
+  font: 600 10px/1 var(--mono); cursor: help; vertical-align: 1px; flex: none;
+  text-transform: none; letter-spacing: 0;
+}
+.info:hover, .info:focus-visible, .info[aria-expanded="true"] { color: var(--accent-ink); border-color: var(--accent); outline: none; }
+.tip {
+  position: fixed; z-index: 1000; max-width: 320px; padding: 10px 12px;
+  background: var(--surface-3); color: var(--text); border: 1px solid var(--border-strong);
+  border-radius: calc(var(--radius) * 0.7); box-shadow: var(--shadow-hover);
+  font-size: 12.5px; line-height: 1.5; font-weight: 400; text-transform: none; letter-spacing: 0; pointer-events: none;
+}
+.tip b { color: var(--accent-ink); }
+.tip .tip-h { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--faint); margin: 6px 0 4px; }
+.tip .tip-h:first-child { margin-top: 0; }
+.tip .tip-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; color: var(--muted); }
+.tip .tip-row .chip { flex: none; }
+
+/* ---------- Two legs: numerator / denominator (identity colours, not polarity) ----------
+   .chip.num = accent, .chip.den = the second series colour, .chip.long = one-sided. */
+.chip.num::before, .chip.den::before, .chip.long::before { content: ""; width: 6px; height: 6px; border-radius: 50%; flex: none; }
+.chip.num { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.chip.num::before, .chip.long::before { background: var(--accent); }
+.chip.den { background: var(--series-2-soft); border-color: color-mix(in srgb, var(--series-2) 45%, transparent); }
+.chip.den::before { background: var(--series-2); }
+.leg-label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.leg-label.num { color: var(--accent); }
+.leg-label.den { color: var(--series-2-ink); }
+.anatomy { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 18px; align-items: center; margin-top: 22px; padding: 18px 22px; }
+.anatomy .side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.anatomy .side.den { align-items: flex-end; text-align: right; }
+.anatomy .chips { gap: 6px; flex-wrap: wrap; }
+.anatomy .side.den .chips { justify-content: flex-end; }
+.anatomy .div { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; font-weight: 700;
+  color: var(--muted); background: var(--surface-3); border: 1px solid var(--border-strong); }
+.anatomy .hint { font-size: 12.5px; color: var(--muted); }
+@media (max-width: 640px) {
+  .anatomy { grid-template-columns: 1fr; }
+  .anatomy .side.den { align-items: flex-start; text-align: left; }
+  .anatomy .side.den .chips { justify-content: flex-start; }
+}
+
+/* ---------- Chart readout and full-screen chart ----------
+   .meter: a one-line readout above a chart (a measured swing, a selected point). A panel with a
+   data-nexus-maximize button takes the whole screen (nexus.js: Nexus.maximize); the chart grows to fill it. */
+.meter { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 2px 14px 6px; font-size: 13px; color: var(--muted); min-height: 30px; }
+.meter b { color: var(--text); }
+.meter .big { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text); }
+.chart-panel.maximized { position: fixed; inset: 0; z-index: 1000; margin: 0; border-radius: 0; display: flex; flex-direction: column;
+  background: var(--surface); padding-bottom: 10px; }
+.chart-panel.maximized .chart { flex: 1 1 auto; height: auto; min-height: 0; }
+body.chart-maximized { overflow: hidden; }
+
 /* ---------- Helpers ---------- */
 .muted { color: var(--muted); }
 .faint { color: var(--faint); }

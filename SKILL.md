@@ -24,7 +24,9 @@ components and chart setup.
 
 ## Building a page in this style
 
-- Start from `template.html` here.
+- Start from `template.html` here. For a dashboard or research tool (settings sidebar, run controls,
+  results table, chart cards, backtest charts) start from `examples/dashboard.html` / `examples/trade-lab.html`
+  and the "Example: a research workbench" section of `DESIGN.md`.
 - **Link the live files in `<head>`**, stylesheet first, script without async/defer:
   `<link rel="stylesheet" href="https://doruirimescu.github.io/nexus-design/nexus.css">`
   `<script src="https://doruirimescu.github.io/nexus-design/nexus.js"></script>`.

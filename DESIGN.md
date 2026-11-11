@@ -7,7 +7,7 @@ markup.
 
 - Live stylesheet: `https://doruirimescu.github.io/nexus-design/nexus.css`
 - Live script (themes, theme panel, charts): `https://doruirimescu.github.io/nexus-design/nexus.js`
-- Starter page: [`template.html`](template.html) · Component gallery: [`index.html`](index.html)
+- Starter page: [`template.html`](template.html) · Component gallery: [`index.html`](index.html) · Examples: [`examples/dashboard.html`](examples/dashboard.html), [`examples/trade-lab.html`](examples/trade-lab.html)
 
 ## Rules
 
@@ -375,6 +375,79 @@ and restyles drawn charts on a theme switch, so pages need no code for it.
   `Plotly.newPlot` / `react`. Opt a page out with `<html data-nexus-chart-style="off">`.
 - Glow (Phosphor) is CSS in `themes/terminal.css`; `nexus.js` copies each trace's
   colour into `color` so the drop-shadow can use `currentColor`.
+
+## Example: a research workbench
+
+Two complete pages show the pieces working together, on synthetic data:
+[`examples/dashboard.html`](examples/dashboard.html) (a scan dashboard) and
+[`examples/trade-lab.html`](examples/trade-lab.html) (a backtest workbench). They come from the Perfect Shapes
+research tool and use only what is in `nexus.css` and `nexus.js`; the little page-specific CSS is layout.
+Start a similar tool from them. The shared data and backtester for the demos is `examples/lab-demo.js`;
+it is not part of the design system.
+
+**Page.** `<body class="wide">` lifts the 1200px container to 1680px. Then `.lab`: a sticky
+`aside.panel.lab-side` (380px) beside `section` results, stacking under 900px. Each settings block is a
+`.group` with an `h4` caption; a row is `label.field` (label left, control right; `.field.wide` puts the
+control below), `label.check` for a checkbox, `.toggle-row` of `.chip`s for on/off choices. Show or hide a
+group by toggling `hidden`. `.run-panel` holds Play / Stop (`.run-buttons`) and a status line with a
+`.badge`, a stage text and a `.progress` bar. Before there are results, show `.panel.empty-state`.
+
+```html
+<body class="wide">
+  <div class="lab">
+    <aside class="panel lab-side">
+      <div class="group"><h4><span>Band</span></h4>
+        <label class="field"><span>Percentile <button type="button" class="info" data-tip="pct" aria-label="About the percentile">i</button></span>
+          <input class="input" type="number" value="10"></label>
+        <label class="check"><input type="checkbox"> <span>Robust only</span></label></div>
+    </aside>
+    <section style="min-width:0">
+      <div class="panel run-panel"><div class="run-buttons">…</div><div class="run-status">…</div></div>
+      <div class="kpis tight">…</div>
+    </section>
+  </div>
+```
+
+**Info bubbles.** Put `<button type="button" class="info" data-tip="key" aria-label="…">i</button>` next to a
+setting and register the text once: `Nexus.tips.key = "<b>Title.</b> Explanation."` (or inline
+`data-tip-html`). One tooltip serves the page: hover, focus, tap, Esc. A tap never triggers the row or card
+that holds the bubble. Explain a setting in one or two sentences; say what it changes, not how it is computed.
+
+**Results.** A `table.data` with `data-list` (rows that open something get `class="openable"`), and below it
+`.chart-grid`: cards of `.chart-panel.openable` with a short `.chart-head`, a `.chart-sub` line and a
+230px `.chart`. Draw each card with a range band, the line and a shaded era for "after the scan"
+(`Nexus.bands`), and no mode bar (`Object.assign({}, Nexus.plotlyConfig, { displayModeBar: false })`).
+
+**Two legs.** For a ratio of two groups, `.chip.num` (accent) and `.chip.den` (second series colour) show
+which stock is on which side, `.leg-label.num/.den` captions a group and `.panel.anatomy` lays the two
+groups out around a `.div` sign. These are identity colours, not polarity: never use them for good/bad.
+
+**The ratio chart.** One `.chart-panel` with `.chart-head` (title, `.legend`, `.tools`), a `.meter` line and
+the chart. Settings that make it read well:
+
+- Log y-axis for a ratio (`yaxis: { type: "log", tickformat: ".3f" }`), `hovermode: "closest"` so a click hits
+  one point, `showlegend: false` (the HTML legend names the marks) and tight margins
+  (`{ l: 56, r: 14, t: 10, b: 36 }`; the equity and drawdown charts use `hovermode: "x unified"`).
+- The band is two lines: an invisible lower edge (`width: 0`) and an upper one with `fill: "tonexty"` and
+  `Nexus.rgba(C.neutral, 0.2)`; the median is a dotted `C.neutral` line; a stop level is a dashed `C.negative` line.
+- Trades are markers: entry up-triangle in `C.positive` (numerator up) or down-triangle in `C.series2`
+  (denominator up), exit an `x` in `C.text`, each with a `hovertemplate` that says what happened.
+- Periods are `Nexus.bands` eras: `accent` for the span the band was fitted on, `positive` for the period being
+  tested, `neutral` for data the fit never saw.
+- Redraw with `Plotly.react` and set `uirevision` to a key that changes only when the period changes: a
+  zoom then survives a click, a setting or a theme switch.
+- **Swing meter.** On `plotly_click` take the clicked point index; the next click is the end point (hover shows
+  a live reading); a third starts over. Draw the pair as a dotted `C.highlight` line with the move in `%` as its
+  label, and write the reading in the `.meter` line (`.big` for the number). Because the chart is redrawn with
+  `Plotly.react` and a stable `uirevision`, the meter works while zoomed.
+- **Full screen.** Add `<button class="btn sm" data-nexus-maximize aria-pressed="false">⛶ Full screen</button>`
+  to the panel's `.tools`. `nexus.js` takes the panel to the browser's full screen (the whole window when the
+  browser refuses), resizes its charts, swaps the label (`data-nexus-max-on` overrides the "✕ Exit full screen"
+  text) and leaves on Esc. `Nexus.maximize(panel, on?)` does the same from code. Zoom and the meter keep working.
+
+Equity and drawdown sit side by side in a `.two-col` of `.chart-panel`s (`h-md`): strategy in `accent`
+(drawdown `negative` with `fill: "tozeroy"`), the benchmark in `neutral`. KPI tiles above use `.kpis.tight`
+with `.value.sm`; colour a return with `.pos` / `.neg`.
 
 ## Changing the design system
 

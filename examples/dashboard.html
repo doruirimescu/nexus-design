@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard · Nexus example</title>
+  <meta name="description" content="Example: a scan dashboard. Settings sidebar with info bubbles, run controls, KPI tiles, a results table and a grid of chart cards.">
+  <!-- Relative links so the example previews local edits; a real page links the hosted files (see template.html). -->
+  <link rel="stylesheet" href="../nexus.css">
+  <script src="../nexus.js"></script>
+  <link rel="icon" href="../favicon.svg">
+  <style>
+    /* page-specific layout only: every colour, control and component comes from nexus.css */
+    table.data td.rank { font-family: var(--mono); color: var(--faint); width: 32px; }
+    .results-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-top: 18px; }
+  </style>
+</head>
+<body class="wide">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="../index.html"><span class="brand-mark">N</span>Nexus Design</a>
+      <nav class="nav">
+        <a href="../index.html">Gallery</a>
+        <a href="dashboard.html" class="active">Example: dashboard</a>
+        <a href="trade-lab.html">Example: Trade Lab</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">Example · illustrative data</div>
+        <h1>Scan <span class="gradient-text">dashboard</span></h1>
+        <p class="lead">Pick a universe and the scan builds every <mark>k vs k ratio of its stocks</mark>, e.g. (A + B + C) / (D + E + F),
+          and ranks the ones that trace a <span class="hl-accent">tradable range</span>. The run below is a <span class="hl-accent">simulation</span>: press Play.</p>
+      </div>
+    </div>
+
+    <div class="lab">
+      <aside class="panel lab-side" aria-label="Scan configuration">
+        <div class="group">
+          <h4><span>Universe</span> <span class="muted small">10 stocks</span></h4>
+          <label class="field"><span>ETF</span><select class="input"><option>XLI · Industrials (synthetic)</option><option>XLE · Energy (synthetic)</option></select></label>
+          <label class="field"><span>Top holdings by weight</span><input class="input" type="number" value="10" min="4" max="80"></label>
+        </div>
+        <div class="group">
+          <h4><span>Baskets</span></h4>
+          <label class="field"><span>Stocks per leg</span><select class="input"><option>2 vs 2</option><option selected>3 vs 3</option><option>4 vs 4</option></select></label>
+          <label class="check"><input type="checkbox"> <span>Allow a stock in both legs</span></label>
+        </div>
+        <div class="group">
+          <h4><span>Shapes</span></h4>
+          <div class="toggle-row" id="shapes">
+            <span class="chip" data-on="1">Range</span><span class="chip off">Uptrend</span><span class="chip off">Downtrend</span></div>
+          <label class="field" style="margin-top:14px"><span>Lookback window (years)</span><input class="input" type="number" value="10" min="0.5" max="30" step="0.5"></label>
+          <label class="field"><span>Lag (years before today)</span><input class="input" type="number" value="0" min="0" max="10" step="0.5"></label>
+        </div>
+        <div class="group">
+          <h4><span>Scoring</span></h4>
+          <label class="check"><input type="checkbox" id="robust" checked> <span>Robust ranges only
+            <button type="button" class="info" data-tip="robust" aria-label="About robust ranges">i</button></span></label>
+          <div id="robust-fields">
+            <label class="field"><span>Min trades / yr</span><input class="input" type="number" id="r_tpy" value="2.0" step="0.1" min="0"></label>
+            <label class="field"><span>Max band / vol
+              <button type="button" class="info" data-tip="bvol" aria-label="About band over vol">i</button></span>
+              <input class="input" type="number" id="r_bvol" value="0.40" step="0.05" min="0.05"></label>
+          </div>
+        </div>
+        <div class="group">
+          <h4><span>Output</span></h4>
+          <label class="field"><span>Results per shape</span><input class="input" type="number" value="8" min="1" max="200"></label>
+          <div class="muted small">The theme panel at the bottom right restyles every chart.</div>
+        </div>
+      </aside>
+
+      <section style="min-width:0">
+        <div class="panel run-panel">
+          <div class="run-buttons">
+            <button class="btn primary" id="play">▶ Play</button>
+            <button class="btn" id="stop" disabled>■ Stop</button>
+          </div>
+          <div class="run-status">
+            <div class="run-line"><span class="badge past" id="badge">Idle</span><span class="muted" id="stage">Configure a scan and press Play.</span>
+              <span class="faint" id="timing"></span></div>
+            <div class="progress" id="bar"><div style="width:0"></div></div>
+          </div>
+        </div>
+
+        <div class="kpis tight" id="kpis"></div>
+
+        <h2 class="section">Results</h2>
+        <div id="report"><div class="panel empty-state">The best ratios found so far appear here within seconds of pressing Play and keep improving as the scan proceeds.</div></div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">Example page of the Nexus design system. The data is synthetic and illustrative. Not investment advice.
+      · <a href="https://github.com/doruirimescu/nexus-design/blob/main/DESIGN.md#example-a-research-workbench">How it is built</a></div>
+  </footer>
+
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+  <script src="lab-demo.js"></script>
+  <script>
+    const { PPY, fmt } = LabDemo, $ = (id) => document.getElementById(id);
+
+    Object.assign(Nexus.tips, {
+      robust: "<b>Robust ranges.</b> Keeps ranges that swing often and cheaply relative to their noise: they were the ones that kept reverting in a forward test. It predicts reversions, not the size of the profit.",
+      bvol: "<b>Band / vol.</b> Half the band's width divided by the ratio's yearly volatility. Lower means the ratio crosses the band quickly: 0.40 is a half-life of about 35 bars.",
+    });
+
+    // ---- ten synthetic ranges, scored on their first 9 years; the last year is the holdout
+    const N = 2520, HOLD = PPY, FIT = N - HOLD, dates = LabDemo.businessDays(N);
+    const NAMES = "ALFA BRVO CHRL DLTA ECHO FXTR GLFX HTLX IKON JLRT".split(" ");
+    const KS = [0.05, 0.04, 0.03, 0.025, 0.02, 0.015, 0.035, 0.012, 0.045, 0.028];
+    const ALL = KS.map((k, i) => {
+      const Y = LabDemo.logRatio(120 + i, { k, sigma: 0.010 + 0.0007 * ((i * 7) % 9) });
+      const b = LabDemo.band(Y, 0, FIT - 1, 10), bt = LabDemo.backtest(Y, 0, FIT - 1, b, {});
+      let sxy = 0, sxx = 0; for (let t = 1; t < FIT; t++) { sxy += Y[t - 1] * (Y[t] - Y[t - 1]); sxx += Y[t - 1] ** 2; }
+      const pick = (offs) => offs.map((o) => NAMES[(i + o) % NAMES.length]);   // two disjoint legs of three stocks
+      return { i, Y, band: b, num: pick([0, 2, 5]), den: pick([1, 3, 7]),
+        tpy: bt.trades.length / (FIT / PPY), bvol: ((b[1] - b[0]) / 2) / LabDemo.annualVol(Y, 0, FIT - 1), half: Math.log(2) / (-sxy / sxx),
+        pos: Y[N - 1] < b[0] ? 1 : Y[N - 1] > b[1] ? -1 : 0 };
+    }).sort((a, b) => b.tpy - a.tpy);
+
+    let shown = false, timer = null;
+    const robust = () => $("robust").checked;
+    const pass = (r) => r.tpy >= +$("r_tpy").value && r.bvol <= +$("r_bvol").value;
+    const chips = (list, cls) => `<span class="chips">${list.map((t) => `<span class="chip ${cls}">${t}</span>`).join("")}</span>`;
+    const ratioCell = (r) => `<span class="ratio" style="display:inline-flex;align-items:center;gap:6px">${chips(r.num, "num")}<span class="faint" style="font-weight:700">÷</span>${chips(r.den, "den")}</span>`;
+    const now = (r) => r.pos > 0 ? '<span class="verdict under">below the band</span>' : r.pos < 0 ? '<span class="verdict over">above the band</span>' : '<span class="dim">inside</span>';
+
+    function draw() {
+      if (!shown) return;
+      const list = ALL.filter((r) => !robust() || pass(r));
+      $("kpis").innerHTML = [["Ratios scored", "4,200", "3 vs 3 of 10 stocks, one window"], ["Listed", list.length, robust() ? "after the robust gates" : "no gates"],
+        ["Outside the band now", list.filter((r) => r.pos).length, "ready for another swing"], ["Fastest range", list.length ? Math.round(Math.min(...list.map((r) => r.half))) + " bars" : "–", "half-life of its swings"]]
+        .map(([l, v, s]) => `<div class="panel kpi"><div class="label">${l}</div><div class="value sm">${v}</div><div class="sub">${s}</div></div>`).join("");
+      if (!list.length) { $("report").innerHTML = '<div class="panel empty-state">No range clears the gates. Lower the thresholds or untick “Robust ranges only”.</div>'; return; }
+      $("report").innerHTML =
+        `<div class="results-head"><span class="muted small">Click a row or a chart to open it in the <a href="trade-lab.html">Trade Lab</a>.</span></div>` +
+        `<div class="table-wrap" style="margin-top:10px"><table class="data" data-list data-list-tap="native"><thead><tr>` +
+        `<th class="rank" data-list="note">#</th><th data-list="title">Ratio</th><th class="num" data-list="value" data-list-suffix="trades / yr">Trades / yr</th>` +
+        `<th class="num">Band / vol</th><th class="num">Half-life</th><th data-list="subtitle">Now</th></tr></thead><tbody>` +
+        list.map((r, n) => `<tr class="openable" data-href="trade-lab.html"><td class="rank">${n + 1}</td><td>${ratioCell(r)}</td><td class="num">${r.tpy.toFixed(1)}</td>` +
+          `<td class="num">${r.bvol.toFixed(2)}</td><td class="num">${Math.round(r.half)} d</td><td>${now(r)}</td></tr>`).join("") +
+        `</tbody></table></div>` +
+        `<div class="chart-grid">${list.slice(0, 6).map((r, n) => `<div class="panel chart-panel openable" data-href="trade-lab.html">` +
+          `<div class="chart-head"><h3><span class="faint" style="font-family:var(--mono)">#${n + 1}</span> ${r.num.join(" + ")} ÷ ${r.den.join(" + ")}</h3>${now(r)}</div>` +
+          `<div class="chart-sub">${r.tpy.toFixed(1)} trades / yr · half-life ${Math.round(r.half)} bars</div><div id="mini-${r.i}" class="chart"></div></div>`).join("")}</div>`;
+      list.slice(0, 6).forEach(miniChart);
+      document.querySelectorAll("[data-href]").forEach((el) => el.addEventListener("click", () => { location.href = el.dataset.href; }));
+    }
+
+    function miniChart(r) {
+      const C = Nexus.colors, xs = dates, flat = (v) => xs.map(() => Math.exp(v));
+      const hold = Nexus.bands([{ x0: dates[FIT], x1: dates[N - 1], label: "", tone: "neutral" }]);
+      const pad = (arr) => Array.from(arr, Math.exp);
+      Plotly.react("mini-" + r.i, [
+        { x: xs, y: flat(r.band[0]), mode: "lines", line: { width: 0, color: C.neutral }, hoverinfo: "skip" },
+        { x: xs, y: flat(r.band[1]), mode: "lines", fill: "tonexty", fillcolor: Nexus.rgba(C.neutral, 0.22), line: { width: 0, color: C.neutral }, hoverinfo: "skip" },
+        { x: xs, y: pad(r.Y), mode: "lines", line: { color: C.accent, width: 1.4 }, hovertemplate: "%{x}<br>ratio %{y:.3f}<extra></extra>" },
+      ], Nexus.plotlyLayout({ showlegend: false, margin: { l: 40, r: 8, t: 6, b: 28 }, yaxis: { type: "log", tickformat: ".2f" },
+        shapes: hold.shapes, annotations: hold.annotations }), Object.assign({}, Nexus.plotlyConfig, { displayModeBar: false }));
+    }
+
+    // ---- a simulated run: progress, stage text, then the results
+    const STAGES = ["building universe", "loading prices", "searching range · window 2520 bars", "scoring ranges", "ranking"];
+    function run() {
+      const t0 = performance.now(), total = 3200;
+      $("play").disabled = true; $("stop").disabled = false; $("badge").className = "badge live"; $("badge").textContent = "Running";
+      timer = setInterval(() => {
+        const f = Math.min((performance.now() - t0) / total, 1);
+        $("bar").firstElementChild.style.width = (f * 100).toFixed(0) + "%";
+        $("stage").textContent = STAGES[Math.min(STAGES.length - 1, Math.floor(f * STAGES.length))];
+        $("timing").textContent = ((performance.now() - t0) / 1000).toFixed(1) + " s";
+        if (f > 0.55 && !shown) { shown = true; draw(); }
+        if (f >= 1) done("Done", "Finished");
+      }, 120);
+    }
+    function done(badge, text) {
+      clearInterval(timer); $("play").disabled = false; $("stop").disabled = true; $("badge").className = "badge past"; $("badge").textContent = badge; $("stage").textContent = text;
+      if (!shown) { shown = true; draw(); }
+      if (badge === "Done") $("bar").firstElementChild.style.width = "100%";
+    }
+    $("play").onclick = () => { shown = false; $("report").innerHTML = '<div class="panel empty-state">Searching…</div>'; $("kpis").innerHTML = ""; run(); };
+    $("stop").onclick = () => done("Stopped", "Stopped. The ranking so far is kept.");
+    ["robust", "r_tpy", "r_bvol"].forEach((id) => $(id).addEventListener("input", () => { $("robust-fields").hidden = !robust(); draw(); }));
+    $("shapes").addEventListener("click", (e) => { const c = e.target.closest(".chip"); if (c) c.classList.toggle("off"); });
+    Nexus.onThemeChange(draw);
+    if (location.hash === "#run") $("play").click();   // deep link: open with a finished run
+  </script>
+</body>
+</html>

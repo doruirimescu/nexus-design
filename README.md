@@ -44,6 +44,7 @@ edit and commit the style itself.
 | `DESIGN.md` | Guide for building pages: rules, tokens, component snippets. |
 | `SKILL.md` | Claude Code skill wrapper around `DESIGN.md`. |
 | `template.html` | Starter page. |
+| `examples/` | Two complete example pages (scan dashboard, Trade Lab) with synthetic data: a workbench with settings sidebar, info bubbles, a full-screen ratio chart and a swing meter. Open `examples/dashboard.html` from disk or at `/examples/dashboard.html` on the gallery site. |
 | `index.html` | Component gallery (the GitHub Pages homepage). |
 | `favicon.svg` | Brand mark. |
 | `chrome-theme/` | Matching Google Chrome theme. Load it unpacked from `chrome://extensions` (Developer mode → Load unpacked). |
