@@ -256,6 +256,12 @@ section heading in More). Scrolling down shrinks the bar to one round button and
 moves a `.dock` into its row; scrolling up restores it. Opt out with
 `<html data-nexus-tabs="off">`.
 
+A section with pages of its own (a strategy's report and its sub-pages, a course)
+sets `<html data-nexus-tabs="page">` instead: the tabs are then the manifest's first
+shortcut (Home) followed by the page's own `.topbar .nav` links, with the `.active`
+link selected and More past five. Each link takes its icon from `data-nexus-icon`
+(default `doc`): `<a data-nexus-icon="chart" href="trend.html">Sector Trend</a>`.
+
 ```json
 { "name": "Investing Nexus", "short_name": "Nexus", "start_url": "index.html", "display": "standalone",
   "icons": [{ "src": "icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }],

@@ -818,15 +818,31 @@
   }
 
   function matches(item, rel, base) {
+    if (item.nexus_active !== undefined) return item.nexus_active;
     if (rel === null) return false;
     const prefixes = item.nexus_match || [new URL(item.url, base).pathname.slice(new URL(".", base).pathname.length)];
     return prefixes.some((p) => rel.startsWith(p));
   }
 
+  // <html data-nexus-tabs="page">: the tabs are the page's own .topbar .nav links (a
+  // section with pages of its own), after the manifest's first shortcut (Home). A link
+  // takes its icon from data-nexus-icon; the .active one is the selected tab.
+  function pageItems(man, base) {
+    const all = (man.shortcuts || []).filter((s) => s && s.url && s.name);
+    const home = all[0] ? [{ ...all[0], nexus_active: false }] : [];
+    const homeUrl = home.length ? new URL(home[0].url, base).href : null;
+    const links = [...document.querySelectorAll(".topbar .nav a[href]")].map((a) => ({
+      name: a.textContent.trim(), url: a.href, nexus_icon: a.dataset.nexusIcon || "doc",
+      nexus_active: a.classList.contains("active") || a.getAttribute("aria-current") === "page",
+    })).filter((s) => s.name && s.url !== homeUrl);
+    return links.length ? home.concat(links) : all;
+  }
+
   let shell = null;
   function buildShell(man, base) {
     if (shell) { shell.remove(); shell = null; }
-    const items = (man.shortcuts || []).filter((s) => s && s.url && s.name);
+    const items = root.dataset.nexusTabs === "page" ? pageItems(man, base)
+      : (man.shortcuts || []).filter((s) => s && s.url && s.name);
     if (items.length < 2) { root.classList.remove("nx-has-tabs"); return; }
     const overflow = items.length > 5;
     const tabs = overflow ? items.slice(0, 4) : items;
